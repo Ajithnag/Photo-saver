@@ -415,6 +415,18 @@
       color: #ebf7ff;
     }
 
+    .delete-btn {
+      border: none;
+      background: rgba(255,107,138,.18);
+      border: 1px solid rgba(255,107,138,.35);
+      color: #ffe7ee;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: .7rem;
+    }
+
     .media-card.locked::before {
       content: "";
       position: absolute;
@@ -778,6 +790,22 @@
       saveUsers(users);
     }
 
+    function deleteMediaItem(itemId) {
+      if (!state.currentUser) return;
+
+      const before = (state.currentUser.media || []).length;
+      state.currentUser.media = (state.currentUser.media || []).filter(item => item.id !== itemId);
+
+      if ((state.currentUser.media || []).length === before) {
+        setVaultStatus("Delete failed. Item not found.", "error");
+        return;
+      }
+
+      saveCurrentUser();
+      renderMedia();
+      setVaultStatus("Media deleted successfully. You can upload new files now.", "success");
+    }
+
     function validateNewFiles(files) {
       if (!state.currentUser) {
         throw new Error("Please login first.");
@@ -872,6 +900,16 @@
           <span class="tag">${item.type.startsWith("image/") ? "Photo" : "Video"}</span>
           <span>${item.name.length > 12 ? item.name.slice(0, 12) + "..." : item.name}</span>
         `;
+
+        if (item.unlocked) {
+          const deleteBtn = document.createElement("button");
+          deleteBtn.className = "delete-btn";
+          deleteBtn.type = "button";
+          deleteBtn.textContent = "Delete";
+          deleteBtn.addEventListener("click", () => deleteMediaItem(item.id));
+          meta.appendChild(deleteBtn);
+        }
+
         card.appendChild(meta);
 
         if (item.locked) {
