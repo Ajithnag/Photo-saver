@@ -37,7 +37,6 @@
     }
 
     .app { width: min(1050px, 100%); }
-
     .hidden { display: none !important; }
 
     .panel {
@@ -470,6 +469,22 @@
       background: rgba(255,255,255,.02);
     }
 
+    .voice-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 12px;
+    }
+
+    .voice-row input {
+      min-width: 0;
+    }
+
+    .voice-row button {
+      min-width: 170px;
+    }
+
     .viewer-overlay {
       position: fixed;
       inset: 0;
@@ -537,6 +552,7 @@
 
     @media (max-width: 560px) {
       .otp-wrap { grid-template-columns: 1fr; }
+      .voice-row { grid-template-columns: 1fr; }
       .toolbar { flex-direction: column; }
       .toolbar .btn { width: 100%; min-width: 0; }
       .vault-header { flex-direction: column; align-items: flex-start; }
@@ -563,9 +579,9 @@
 
             <ul class="features">
               <li><span class="check">✓</span> Voice note-based unlocking</li>
+              <li><span class="check">✓</span> Voice password phrase</li>
               <li><span class="check">✓</span> Up to 15 total items</li>
               <li><span class="check">✓</span> Video up to 10 MB each</li>
-              <li><span class="check">✓</span> Login with email and password</li>
             </ul>
           </div>
 
@@ -617,12 +633,13 @@
             <div class="brand-badge">Secure Voice Vault</div>
             <h1>Create your account and register your voice note.</h1>
             <p>
-              Sign up using email and password. Optional phone + OTP can also be enabled for extra verification.
+              Sign up using email and password. Set your spoken voice password and only your voice can unlock it.
             </p>
 
             <ul class="features">
               <li><span class="check">✓</span> Email + password signup</li>
               <li><span class="check">✓</span> Voice note registration</li>
+              <li><span class="check">✓</span> Voice password phrase</li>
               <li><span class="check">✓</span> Locked and blurred media vault</li>
             </ul>
           </div>
@@ -645,6 +662,11 @@
               <div class="field">
                 <label for="signupPassword">Password</label>
                 <input id="signupPassword" name="signupPassword" type="password" placeholder="Create password" required />
+              </div>
+
+              <div class="field">
+                <label for="signupVoicePassword">Voice Password Phrase</label>
+                <input id="signupVoicePassword" name="signupVoicePassword" type="text" placeholder="Example: unlock-now-123" required />
               </div>
 
               <div class="field">
@@ -694,6 +716,14 @@
           <button id="changeVoiceBtn" class="btn secondary" type="button">Change Voice Note</button>
           <button id="unlockAllBtn" class="btn primary" type="button">Unlock with Voice Note</button>
           <button id="logoutBtn" class="btn danger" type="button">Logout</button>
+        </div>
+
+        <div class="field">
+          <label for="voicePasswordInput">Your Voice Password Phrase</label>
+          <div class="voice-row">
+            <input id="voicePasswordInput" type="text" placeholder="Example: unlock-now-123" />
+            <button id="saveVoicePasswordBtn" class="btn secondary" type="button">Save Phrase</button>
+          </div>
         </div>
 
         <div id="vaultStatus" class="status">Voice note not yet registered. Register your voice note before unlocking the vault.</div>
@@ -756,6 +786,8 @@
     const mediaViewer = document.getElementById("mediaViewer");
     const viewerContent = document.getElementById("viewerContent");
     const closeViewerBtn = document.getElementById("closeViewerBtn");
+    const voicePasswordInput = document.getElementById("voicePasswordInput");
+    const saveVoicePasswordBtn = document.getElementById("saveVoicePasswordBtn");
 
     function isVideoFile(file) {
       const type = (file.type || "").toLowerCase();
@@ -867,6 +899,8 @@
         phone: user.phone || "",
         countryCode: user.countryCode || "",
         voiceProfile: user.voiceProfile || null,
+        voicePasswordProfile: user.voicePasswordProfile || null,
+        voicePasswordText: user.voicePasswordText || "",
         media: (user.media || []).map(item => ({
           id: item.id,
           name: item.name,
@@ -912,6 +946,7 @@
       authPanel.classList.add("hidden");
       vaultPanel.classList.remove("hidden");
       userIdentity.textContent = `${state.currentUser.name} • ${state.currentUser.email}`;
+      voicePasswordInput.value = state.currentUser.voicePasswordText || "";
       renderMedia();
 
       if (!state.currentUser.voiceProfile) {
@@ -919,9 +954,9 @@
       } else {
         const unlocked = (state.currentUser.media || []).filter(item => item.unlocked).length;
         if (unlocked > 0) {
-          setVaultStatus(`Voice note matched. ${unlocked} media item(s) unlocked.`, "success");
+          setVaultStatus(`Voice password and voice matched. ${unlocked} media item(s) unlocked.`, "success");
         } else {
-          setVaultStatus("Voice note registered. Record a matching voice note to unlock the vault.", "info");
+          setVaultStatus("Voice note and voice password registered. Say the phrase again to unlock the vault.", "info");
         }
       }
     }
@@ -1293,27 +1328,30 @@
 
           if (mode === "register" || mode === "change") {
             state.currentUser.voiceProfile = profile;
+            state.currentUser.voicePasswordProfile = profile;
+            state.currentUser.voicePasswordText = (state.currentUser.voicePasswordText || "").trim() || (document.getElementById("signupVoicePassword")?.value || "").trim() || "unlock-now-123";
             saveUserOnly(state.currentUser);
 
             if (mode === "change") {
-              setVaultStatus("Voice note changed successfully. Media is now protected by the new voice note.", "success");
+              setVaultStatus("Voice note and voice password updated successfully.", "success");
             } else {
-              setVaultStatus("Voice note registered successfully. Your media vault is now protected by your voice note.", "success");
+              setVaultStatus("Voice note and voice password registered successfully. Only your voice can unlock it.", "success");
             }
 
             renderMedia();
             return;
           }
 
-          if (!state.currentUser.voiceProfile) {
-            setVaultStatus("Please register your voice note before unlocking the vault.", "error");
+          if (!state.currentUser.voiceProfile || !state.currentUser.voicePasswordProfile) {
+            setVaultStatus("Please register your voice note and voice password before unlocking.", "error");
             return;
           }
 
-          const result = compareProfiles(state.currentUser.voiceProfile, profile);
+          const voiceMatch = compareProfiles(state.currentUser.voiceProfile, profile);
+          const phraseMatch = compareProfiles(state.currentUser.voicePasswordProfile, profile);
 
           if (mode === "unlock-all") {
-            if (result.pass) {
+            if (voiceMatch.pass && phraseMatch.pass) {
               state.currentUser.media = (state.currentUser.media || []).map(item => ({
                 ...item,
                 locked: false,
@@ -1321,29 +1359,29 @@
               }));
               saveUserOnly(state.currentUser);
               renderMedia();
-              setVaultStatus(`Voice note verified. Vault unlocked. Match score: ${result.score.toFixed(2)}`, "success");
+              setVaultStatus(`Access granted. Voice and phrase matched. Voice score: ${voiceMatch.score.toFixed(2)}`, "success");
             } else {
-              setVaultStatus(`Voice note did not match. The vault stays locked. Match score: ${result.score.toFixed(2)}`, "error");
+              setVaultStatus(`Access denied. Only the registered voice can unlock. Voice score: ${voiceMatch.score.toFixed(2)}`, "error");
             }
             return;
           }
 
           if (mode === "unlock-single") {
-            if (result.pass) {
+            if (voiceMatch.pass && phraseMatch.pass) {
               state.currentUser.media = (state.currentUser.media || []).map(item => {
                 if (item.id === itemId) return { ...item, locked: false, unlocked: true };
                 return item;
               });
               saveUserOnly(state.currentUser);
               renderMedia();
-              setVaultStatus(`Voice note verified. This media item is unlocked. Match score: ${result.score.toFixed(2)}`, "success");
+              setVaultStatus(`Access granted. Media unlocked. Voice score: ${voiceMatch.score.toFixed(2)}`, "success");
             } else {
-              setVaultStatus(`Voice note mismatch. This item remains locked. Match score: ${result.score.toFixed(2)}`, "error");
+              setVaultStatus(`Access denied. This media remains locked. Voice score: ${voiceMatch.score.toFixed(2)}`, "error");
             }
           }
         };
 
-        setVaultStatus("Recording voice note... Please speak clearly for 3 seconds.", "info");
+        setVaultStatus("Recording voice password... Please speak your registered password phrase clearly for 3 seconds.", "info");
         recorder.start();
         setTimeout(() => recorder.stop(), 3000);
 
@@ -1351,6 +1389,23 @@
         setVaultStatus("Microphone access is required for voice verification.", "error");
       }
     }
+
+    saveVoicePasswordBtn.addEventListener("click", () => {
+      if (!state.currentUser) {
+        setVaultStatus("Please login first.", "error");
+        return;
+      }
+
+      const value = voicePasswordInput.value.trim();
+      if (!value) {
+        setVaultStatus("Please enter your voice password phrase.", "error");
+        return;
+      }
+
+      state.currentUser.voicePasswordText = value;
+      saveUserOnly(state.currentUser);
+      setVaultStatus("Voice password phrase saved.", "success");
+    });
 
     forgotPasswordBtn.addEventListener("click", () => {
       forgotPasswordBox.classList.toggle("hidden");
@@ -1419,9 +1474,10 @@
       const phone = document.getElementById("signupPhone").value.trim();
       const phoneCode = document.getElementById("signupCountryCode").value;
       const otpInput = document.getElementById("signupOtp").value.trim();
+      const voicePassword = document.getElementById("signupVoicePassword").value.trim();
 
-      if (!name || !email || !password) {
-        setMessage(signupMessage, "Name, email, and password are required.", "error");
+      if (!name || !email || !password || !voicePassword) {
+        setMessage(signupMessage, "Name, email, password, and voice password phrase are required.", "error");
         return;
       }
 
@@ -1455,6 +1511,8 @@
         phone: phone ? formatPhone(phoneCode, phone) : "",
         countryCode: phone ? phoneCode : "",
         voiceProfile: null,
+        voicePasswordProfile: null,
+        voicePasswordText: voicePassword,
         media: []
       };
 
@@ -1485,19 +1543,44 @@
 
       lockAllMedia(state.currentUser);
       saveUserOnly(state.currentUser);
+      voicePasswordInput.value = state.currentUser.voicePasswordText || "";
       clearMessage(loginMessage);
       showVault();
     });
 
     document.getElementById("registerVoiceBtn").addEventListener("click", () => {
+      if (!state.currentUser) return;
+      if (!voicePasswordInput.value.trim()) {
+        setVaultStatus("Please set a voice password phrase before registering your voice.", "error");
+        return;
+      }
+
+      state.currentUser.voicePasswordText = voicePasswordInput.value.trim();
+      saveUserOnly(state.currentUser);
       startRecording("register");
     });
 
     document.getElementById("changeVoiceBtn").addEventListener("click", () => {
+      if (!state.currentUser) return;
+      if (!voicePasswordInput.value.trim()) {
+        setVaultStatus("Please set a voice password phrase before changing your voice.", "error");
+        return;
+      }
+
+      state.currentUser.voicePasswordText = voicePasswordInput.value.trim();
+      saveUserOnly(state.currentUser);
       startRecording("change");
     });
 
     document.getElementById("unlockAllBtn").addEventListener("click", () => {
+      if (!state.currentUser) return;
+      if (!voicePasswordInput.value.trim()) {
+        setVaultStatus("Please enter your voice password phrase before unlocking.", "error");
+        return;
+      }
+
+      state.currentUser.voicePasswordText = voicePasswordInput.value.trim();
+      saveUserOnly(state.currentUser);
       startRecording("unlock-all");
     });
 
@@ -1533,6 +1616,8 @@
           phone: "",
           countryCode: "",
           voiceProfile: null,
+          voicePasswordProfile: null,
+          voicePasswordText: "unlock-now-123",
           media: []
         }
       ]);
