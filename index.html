@@ -36,9 +36,7 @@
       padding: 24px;
     }
 
-    .app {
-      width: min(1050px, 100%);
-    }
+    .app { width: min(1050px, 100%); }
 
     .hidden { display: none !important; }
 
@@ -87,9 +85,7 @@
       align-items: center;
     }
 
-    .brand {
-      padding: 10px 8px 8px 4px;
-    }
+    .brand { padding: 10px 8px 8px 4px; }
 
     .brand-badge {
       display: inline-block;
@@ -214,9 +210,7 @@
       outline: none;
     }
 
-    input::placeholder {
-      color: rgba(237,248,255,.55);
-    }
+    input::placeholder { color: rgba(237,248,255,.55); }
 
     .otp-wrap {
       display: grid;
@@ -659,7 +653,9 @@
 
   <script>
     const USERS_KEY = "secure_voice_vault_users";
-    const MAX_PHOTOS = 15;
+    const MEDIA_DB = "secure_voice_vault_media";
+    const MEDIA_STORE = "media";
+    const MAX_ITEMS = 15;
     const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
 
     const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
@@ -713,14 +709,106 @@
 
     function getUsers() {
       try {
-        return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+        const raw = localStorage.getItem(USERS_KEY);
+        return raw ? JSON.parse(raw) : [];
       } catch {
+        localStorage.removeItem(USERS_KEY);
         return [];
       }
     }
 
     function saveUsers(users) {
       localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    }
+
+    function openMediaDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(MEDIA_DB, 1);
+
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(MEDIA_STORE)) {
+            db.createObjectStore(MEDIA_STORE, { keyPath: "id" });
+          }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function saveMediaBlob(item) {
+      const db = await openMediaDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(MEDIA_STORE, "readwrite");
+        const store = tx.objectStore(MEDIA_STORE);
+
+        const record = {
+          id: item.id,
+          blob: item.blob,
+          name: item.name,
+          type: item.type,
+          kind: item.kind
+        };
+
+        const request = store.put(record);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function getMediaBlob(id) {
+      const db = await openMediaDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(MEDIA_STORE, "readonly");
+        const store = tx.objectStore(MEDIA_STORE);
+        const request = store.get(id);
+
+        request.onsuccess = () => resolve(request.result ? request.result.blob : null);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function deleteMediaBlob(id) {
+      const db = await openMediaDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(MEDIA_STORE, "readwrite");
+        const store = tx.objectStore(MEDIA_STORE);
+        const request = store.delete(id);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    function saveUserOnly(user) {
+      if (!user) return;
+
+      const users = getUsers();
+      const index = users.findIndex(u => u.email === user.email);
+
+      const safeUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        password: user.password,
+        phone: user.phone || "",
+        countryCode: user.countryCode || "",
+        voiceProfile: user.voiceProfile || null,
+        media: (user.media || []).map(item => ({
+          id: item.id,
+          name: item.name,
+          type: item.type,
+          locked: item.locked,
+          unlocked: item.unlocked,
+          kind: item.kind || "image"
+        }))
+      };
+
+      if (index >= 0) users[index] = safeUser;
+      else users.push(safeUser);
+
+      saveUsers(users);
     }
 
     function switchTab(tab) {
@@ -791,17 +879,6 @@
       }));
     }
 
-    function saveCurrentUser() {
-      const users = getUsers();
-      const idx = users.findIndex(u => u.email === state.currentUser.email);
-      if (idx >= 0) {
-        users[idx] = { ...state.currentUser };
-      } else {
-        users.push({ ...state.currentUser });
-      }
-      saveUsers(users);
-    }
-
     function deleteMediaItem(itemId) {
       if (!state.currentUser) return;
 
@@ -813,7 +890,8 @@
         return;
       }
 
-      saveCurrentUser();
+      deleteMediaBlob(itemId).catch(() => {});
+      saveUserOnly(state.currentUser);
       renderMedia();
       setVaultStatus("Media deleted successfully. You can upload new files now.", "success");
     }
@@ -823,14 +901,15 @@
 
       const currentCount = Array.isArray(state.currentUser.media) ? state.currentUser.media.length : 0;
 
-      if (currentCount + files.length > MAX_PHOTOS) {
-        throw new Error(`You can upload only ${MAX_PHOTOS} total items including photos and videos.`);
+      if (currentCount + files.length > MAX_ITEMS) {
+        throw new Error(`You can upload only ${MAX_ITEMS} total items including photos and videos.`);
       }
 
       for (const file of files) {
         if (!isImageFile(file) && !isVideoFile(file)) {
           throw new Error(`Unsupported file type: ${file.name}`);
         }
+
         if (isVideoFile(file) && file.size > MAX_VIDEO_SIZE) {
           throw new Error(`Video too large: ${file.name}. Maximum size is 10 MB.`);
         }
@@ -848,29 +927,32 @@
 
     async function handleMediaUpload(event) {
       const files = Array.from(event.target.files || []);
-
       if (!files.length) return;
 
       try {
         validateNewFiles(files);
 
-        const items = await Promise.all(files.map(async (file) => {
-          const dataUrl = await readFileAsDataURL(file);
-          const isVideo = isVideoFile(file);
-          return {
+        const items = [];
+
+        for (const file of files) {
+          const kind = isVideoFile(file) ? "video" : "image";
+          const item = {
             id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
             name: file.name,
-            type: file.type || (isVideo ? "video/mp4" : "image/jpeg"),
-            dataUrl,
+            type: file.type || (kind === "video" ? "video/mp4" : "image/jpeg"),
             locked: true,
             unlocked: false,
-            kind: isVideo ? "video" : "image"
+            kind
           };
-        }));
+
+          const blob = file;
+          await saveMediaBlob({ ...item, blob });
+          items.push(item);
+        }
 
         state.currentUser.media = Array.isArray(state.currentUser.media) ? state.currentUser.media : [];
         state.currentUser.media.push(...items);
-        saveCurrentUser();
+        saveUserOnly(state.currentUser);
         renderMedia();
         setVaultStatus(`${items.length} file(s) uploaded and locked until voice note unlock.`, "info");
         event.target.value = "";
@@ -880,7 +962,7 @@
       }
     }
 
-    function renderMedia() {
+    async function renderMedia() {
       const items = state.currentUser?.media || [];
       mediaGrid.innerHTML = "";
 
@@ -889,29 +971,32 @@
         return;
       }
 
-      items.forEach(item => {
+      for (const item of items) {
+        const blob = await getMediaBlob(item.id);
+
         const card = document.createElement("div");
         card.className = "media-card" + (item.locked ? " locked" : "");
 
-        const kind = item.kind || (item.type && item.type.startsWith("video/") ? "video" : "image");
+        if (blob) {
+          const url = URL.createObjectURL(blob);
 
-        if (kind === "video") {
-          const video = document.createElement("video");
-          video.src = item.dataUrl;
-          video.controls = true;
-          video.muted = false;
-          card.appendChild(video);
-        } else {
-          const img = document.createElement("img");
-          img.src = item.dataUrl;
-          img.alt = item.name;
-          card.appendChild(img);
+          if (item.kind === "video") {
+            const video = document.createElement("video");
+            video.src = url;
+            video.controls = true;
+            card.appendChild(video);
+          } else {
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = item.name;
+            card.appendChild(img);
+          }
         }
 
         const meta = document.createElement("div");
         meta.className = "meta";
         meta.innerHTML = `
-          <span class="tag">${kind === "video" ? "Video" : "Photo"}</span>
+          <span class="tag">${item.kind === "video" ? "Video" : "Photo"}</span>
           <span>${item.name.length > 12 ? item.name.slice(0, 12) + "..." : item.name}</span>
         `;
 
@@ -942,7 +1027,7 @@
         }
 
         mediaGrid.appendChild(card);
-      });
+      }
     }
 
     function normalizeSignal(signal) {
@@ -1084,7 +1169,7 @@
 
           if (mode === "register" || mode === "change") {
             state.currentUser.voiceProfile = profile;
-            saveCurrentUser();
+            saveUserOnly(state.currentUser);
 
             if (mode === "change") {
               setVaultStatus("Voice note changed successfully. Media is now protected by the new voice note.", "success");
@@ -1110,7 +1195,7 @@
                 locked: false,
                 unlocked: true
               }));
-              saveCurrentUser();
+              saveUserOnly(state.currentUser);
               renderMedia();
               setVaultStatus(`Voice note verified. Vault unlocked. Match score: ${result.score.toFixed(2)}`, "success");
             } else {
@@ -1125,7 +1210,7 @@
                 if (item.id === itemId) return { ...item, locked: false, unlocked: true };
                 return item;
               });
-              saveCurrentUser();
+              saveUserOnly(state.currentUser);
               renderMedia();
               setVaultStatus(`Voice note verified. This media item is unlocked. Match score: ${result.score.toFixed(2)}`, "success");
             } else {
@@ -1137,6 +1222,7 @@
         setVaultStatus("Recording voice note... Please speak clearly for 3 seconds.", "info");
         recorder.start();
         setTimeout(() => recorder.stop(), 3000);
+
       } catch (error) {
         setVaultStatus("Microphone access is required for voice verification.", "error");
       }
@@ -1248,8 +1334,7 @@
         media: []
       };
 
-      users.push(user);
-      saveUsers(users);
+      saveUserOnly(user);
       state.currentUser = user;
       clearMessage(signupMessage);
       showVault();
@@ -1275,7 +1360,7 @@
       };
 
       lockAllMedia(state.currentUser);
-      saveCurrentUser();
+      saveUserOnly(state.currentUser);
       clearMessage(loginMessage);
       showVault();
     });
@@ -1295,7 +1380,7 @@
     document.getElementById("logoutBtn").addEventListener("click", () => {
       if (state.currentUser) {
         lockAllMedia(state.currentUser);
-        saveCurrentUser();
+        saveUserOnly(state.currentUser);
       }
 
       state.currentUser = null;
