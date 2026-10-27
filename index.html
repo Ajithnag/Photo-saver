@@ -802,7 +802,7 @@
 
           <input id="songUpload" type="file" accept="audio/*,video/*" />
           <small style="display:block; margin-top:10px; color: var(--muted);">
-            Upload songs up to 30 MB. Supports mp3, mp4, and other common audio/video files. The song plays automatically when the vault is unlocked and stops when the vault is locked.
+            Upload songs up to 30 MB. Supports mp3, mp4, and other common audio/video files. Song plays automatically after vault unlock and stops when the vault is locked or logged out.
           </small>
 
           <div id="songList" class="song-list"></div>
@@ -1156,6 +1156,19 @@
       }
     }
 
+    function clearSongsForUser(user) {
+      if (!user || !Array.isArray(user.songs)) return;
+
+      const songIds = user.songs.map(song => song.id);
+
+      Promise.all(songIds.map(id => deleteMediaBlob(id).catch(() => {}))).finally(() => {
+        user.songs = [];
+        saveUserOnly(user);
+        renderSongs();
+        syncSongPlayback();
+      });
+    }
+
     function shouldPlaySong() {
       if (!state.currentUser) return false;
 
@@ -1193,10 +1206,12 @@
       const firstSong = songs[0];
       getMediaBlob(firstSong.id).then(blob => {
         if (!blob || !shouldPlaySong() || !state.currentUser) return;
+
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audio.loop = true;
         state.currentSongAudio = audio;
+
         audio.play().catch(() => {});
       }).catch(() => {});
     }
@@ -1274,24 +1289,6 @@
       }
     }
 
-    function deleteSong(songId) {
-      if (!state.currentUser) return;
-
-      const before = (state.currentUser.songs || []).length;
-      state.currentUser.songs = (state.currentUser.songs || []).filter(song => song.id !== songId);
-
-      if ((state.currentUser.songs || []).length === before) {
-        setVaultStatus("Delete failed. Song not found.", "error");
-        return;
-      }
-
-      deleteMediaBlob(songId).catch(() => {});
-      saveUserOnly(state.currentUser);
-      renderSongs();
-      syncSongPlayback();
-      setVaultStatus("Song deleted successfully.", "success");
-    }
-
     async function renderSongs() {
       if (!state.currentUser) {
         songList.innerHTML = "";
@@ -1312,42 +1309,9 @@
         item.className = "song-item";
 
         const info = document.createElement("div");
-        info.innerHTML = `<strong>${song.name}</strong><span style="color: var(--muted); font-size: .8rem;">Song</span>`;
-
-        const actions = document.createElement("div");
-        actions.className = "song-actions";
-
-        const playBtn = document.createElement("button");
-        playBtn.type = "button";
-        playBtn.className = "small-btn play";
-        playBtn.textContent = "Play";
-        playBtn.addEventListener("click", async () => {
-          const blob = await getMediaBlob(song.id);
-          if (!blob) return;
-
-          if (state.currentSongAudio) {
-            state.currentSongAudio.pause();
-            state.currentSongAudio.currentTime = 0;
-          }
-
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          audio.loop = true;
-          state.currentSongAudio = audio;
-          audio.play().catch(() => {});
-        });
-
-        const deleteBtn = document.createElement("button");
-        deleteBtn.type = "button";
-        deleteBtn.className = "small-btn delete";
-        deleteBtn.textContent = "Delete";
-        deleteBtn.addEventListener("click", () => deleteSong(song.id));
-
-        actions.appendChild(playBtn);
-        actions.appendChild(deleteBtn);
+        info.innerHTML = `<strong>${song.name}</strong><span style="color: var(--muted); font-size: .8rem;">Auto plays after unlock</span>`;
 
         item.appendChild(info);
-        item.appendChild(actions);
         songList.appendChild(item);
       }
     }
@@ -1879,11 +1843,19 @@
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
       if (state.currentUser) {
+        // Lock media again
         lockAllMedia(state.currentUser);
+
+        // Auto delete songs on logout
+        clearSongsForUser(state.currentUser);
+
+        // Save current locked state
         saveUserOnly(state.currentUser);
+
+        // Stop any music immediately
+        stopCurrentSong();
       }
 
-      stopCurrentSong();
       state.currentUser = null;
       state.generatedOtp = null;
       document.getElementById("signupOtp").value = "";
