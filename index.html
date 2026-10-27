@@ -495,14 +495,14 @@
         <div class="auth-grid">
           <div class="brand">
             <div class="brand-badge">Secure Voice Vault</div>
-            <h1>Protect your private photos and videos with your own voice.</h1>
+            <h1>Protect your private photos and videos with your own voice note.</h1>
             <p>
-              Store up to 15 photos and videos. Every media item is locked until
-              your voice note matches your registered voice profile.
+              Store up to 15 photos and videos. Each media item stays blurred and locked until
+              a matching voice note unlocks it.
             </p>
 
             <ul class="features">
-              <li><span class="check">✓</span> Voice-based unlocking</li>
+              <li><span class="check">✓</span> Voice note-based unlocking</li>
               <li><span class="check">✓</span> Up to 15 photos</li>
               <li><span class="check">✓</span> Video up to 10 MB each</li>
               <li><span class="check">✓</span> Login with email and password</li>
@@ -534,15 +534,15 @@
         <div class="auth-grid">
           <div class="brand">
             <div class="brand-badge">Secure Voice Vault</div>
-            <h1>Create your account and register your voice for unlocking.</h1>
+            <h1>Create your account and register your voice note.</h1>
             <p>
               Sign up using email and password. Optional phone + OTP can also be enabled for extra verification.
             </p>
 
             <ul class="features">
               <li><span class="check">✓</span> Email + password signup</li>
-              <li><span class="check">✓</span> Voice profile registration</li>
-              <li><span class="check">✓</span> Locked media vault</li>
+              <li><span class="check">✓</span> Voice note registration</li>
+              <li><span class="check">✓</span> Locked and blurred media vault</li>
             </ul>
           </div>
 
@@ -609,18 +609,19 @@
 
       <div class="vault-body">
         <div class="toolbar">
-          <button id="registerVoiceBtn" class="btn secondary" type="button">Register Voice</button>
+          <button id="registerVoiceBtn" class="btn secondary" type="button">Register Voice Note</button>
+          <button id="changeVoiceBtn" class="btn secondary" type="button">Change Voice Note</button>
           <button id="unlockAllBtn" class="btn primary" type="button">Unlock with Voice Note</button>
           <button id="logoutBtn" class="btn danger" type="button">Logout</button>
         </div>
 
-        <div id="vaultStatus" class="status">Voice not yet registered. Register your voice before unlocking the vault.</div>
+        <div id="vaultStatus" class="status">Voice note not yet registered. Register your voice note before unlocking the vault.</div>
 
         <div class="upload-box">
           <input id="mediaUpload" type="file" accept="image/*,video/*" multiple />
           <small>
-            Upload up to 15 photos. Videos are limited to 10 MB each. All media stays locked until your
-            registered voice matches the voice note.
+            Upload up to 15 photos. Videos are limited to 10 MB each. All media stays blurred and locked until
+            your registered voice note matches the voice note used to unlock.
           </small>
         </div>
 
@@ -710,13 +711,13 @@
       renderMedia();
 
       if (!state.currentUser.voiceProfile) {
-        setVaultStatus("Voice not yet registered. Register your voice before unlocking the vault.", "info");
+        setVaultStatus("Voice note not yet registered. Register your voice note before unlocking the vault.", "info");
       } else {
         const unlocked = state.currentUser.media.filter(item => item.unlocked).length;
         if (unlocked > 0) {
-          setVaultStatus(`Voice matched. ${unlocked} media item(s) unlocked.`, "success");
+          setVaultStatus(`Voice note matched. ${unlocked} media item(s) unlocked.`, "success");
         } else {
-          setVaultStatus("Voice registered. Record a matching voice note to unlock the vault.", "info");
+          setVaultStatus("Voice note registered. Record a matching voice note to unlock the vault.", "info");
         }
       }
     }
@@ -801,7 +802,7 @@
         state.currentUser.media.push(...items);
         saveCurrentUser();
         renderMedia();
-        setVaultStatus(`${items.length} file(s) uploaded and locked until voice unlock.`, "info");
+        setVaultStatus(`${items.length} file(s) uploaded and locked until voice note unlock.`, "info");
         event.target.value = "";
       } catch (error) {
         setVaultStatus(error.message || "File upload failed.", "error");
@@ -849,7 +850,7 @@
           overlay.innerHTML = `
             <div>
               <div class="lock-badge">Locked</div>
-              <button type="button" class="lock-btn">Unlock with Voice</button>
+              <button type="button" class="lock-btn">Unlock with Voice Note</button>
             </div>
           `;
           overlay.querySelector(".lock-btn").addEventListener("click", () => {
@@ -1001,16 +1002,20 @@
           const blob = new Blob(chunks, { type: "audio/webm" });
           const profile = await decodeVoiceBlob(blob);
 
-          if (mode === "register") {
+          if (mode === "register" || mode === "change") {
             state.currentUser.voiceProfile = profile;
             saveCurrentUser();
-            setVaultStatus("Voice registered successfully. Your media vault is now protected by your voice.", "success");
+            if (mode === "change") {
+              setVaultStatus("Voice note updated successfully. All media remains protected by the new voice note.", "success");
+            } else {
+              setVaultStatus("Voice note registered successfully. Your media vault is now protected by your voice note.", "success");
+            }
             renderMedia();
             return;
           }
 
           if (!state.currentUser.voiceProfile) {
-            setVaultStatus("Please register your voice before unlocking the vault.", "error");
+            setVaultStatus("Please register your voice note before unlocking the vault.", "error");
             return;
           }
 
@@ -1025,9 +1030,9 @@
               }));
               saveCurrentUser();
               renderMedia();
-              setVaultStatus(`Voice verified. Vault unlocked. Match score: ${result.score.toFixed(2)}`, "success");
+              setVaultStatus(`Voice note verified. Vault unlocked. Match score: ${result.score.toFixed(2)}`, "success");
             } else {
-              setVaultStatus(`Voice did not match. Try again. Match score: ${result.score.toFixed(2)}`, "error");
+              setVaultStatus(`Voice note did not match. Try again. Match score: ${result.score.toFixed(2)}`, "error");
             }
             return;
           }
@@ -1040,9 +1045,9 @@
               });
               saveCurrentUser();
               renderMedia();
-              setVaultStatus(`Voice verified. This media item is unlocked. Match score: ${result.score.toFixed(2)}`, "success");
+              setVaultStatus(`Voice note verified. This media item is unlocked. Match score: ${result.score.toFixed(2)}`, "success");
             } else {
-              setVaultStatus(`Voice mismatch. This item remains locked. Match score: ${result.score.toFixed(2)}`, "error");
+              setVaultStatus(`Voice note mismatch. This item remains locked. Match score: ${result.score.toFixed(2)}`, "error");
             }
           }
         };
@@ -1149,6 +1154,10 @@
 
     document.getElementById("registerVoiceBtn").addEventListener("click", () => {
       startRecording("register");
+    });
+
+    document.getElementById("changeVoiceBtn").addEventListener("click", () => {
+      startRecording("change");
     });
 
     document.getElementById("unlockAllBtn").addEventListener("click", () => {
