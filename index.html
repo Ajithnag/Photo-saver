@@ -802,7 +802,7 @@
 
           <input id="songUpload" type="file" accept="audio/*,video/*" />
           <small style="display:block; margin-top:10px; color: var(--muted);">
-            Upload songs up to 30 MB. Supports mp3, mp4, and other common audio/video files. The song plays only when the vault is unlocked and stops when the vault is locked again.
+            Upload songs up to 30 MB. Supports mp3, mp4, and other common audio/video files. The song plays automatically when the vault is unlocked and stops when the vault is locked.
           </small>
 
           <div id="songList" class="song-list"></div>
@@ -889,10 +889,12 @@
     function isSongFile(file) {
       const type = (file.type || "").toLowerCase();
       const name = (file.name || "").toLowerCase();
-
-      const acceptableAudio = type.startsWith("audio/") || AUDIO_EXTENSIONS.some(ext => name.endsWith(ext));
-      const acceptableVideo = type.startsWith("video/") || VIDEO_EXTENSIONS.some(ext => name.endsWith(ext));
-      return acceptableAudio || acceptableVideo;
+      return (
+        type.startsWith("audio/") ||
+        type.startsWith("video/") ||
+        AUDIO_EXTENSIONS.some(ext => name.endsWith(ext)) ||
+        VIDEO_EXTENSIONS.some(ext => name.endsWith(ext))
+      );
     }
 
     function setMessage(el, text, type) {
@@ -1079,6 +1081,14 @@
           : "rgba(95,228,255,.35)";
     }
 
+    function isVaultUnlocked() {
+      if (!state.currentUser || !Array.isArray(state.currentUser.media) || !state.currentUser.media.length) {
+        return false;
+      }
+
+      return state.currentUser.media.every(item => item.unlocked === true);
+    }
+
     function lockAllMedia(user) {
       if (!user || !user.media) return;
       user.media = user.media.map(item => ({
@@ -1129,12 +1139,7 @@
     function validateSongFile(file) {
       if (!state.currentUser) throw new Error("Please login first.");
 
-      const name = (file.name || "").toLowerCase();
-      const type = (file.type || "").toLowerCase();
-
-      const supported = isSongFile(file);
-
-      if (!supported) {
+      if (!isSongFile(file)) {
         throw new Error(`Unsupported song type: ${file.name}`);
       }
 
@@ -1153,9 +1158,11 @@
 
     function shouldPlaySong() {
       if (!state.currentUser) return false;
-      const media = state.currentUser.media || [];
-      if (!media.length) return false;
-      return media.every(item => item.unlocked);
+
+      const songs = Array.isArray(state.currentUser.songs) ? state.currentUser.songs : [];
+      if (!songs.length) return false;
+
+      return isVaultUnlocked();
     }
 
     function syncSongPlayback() {
@@ -1165,6 +1172,7 @@
       }
 
       const songs = state.currentUser.songs || [];
+
       if (!songs.length) {
         stopCurrentSong();
         return;
@@ -1185,12 +1193,10 @@
       const firstSong = songs[0];
       getMediaBlob(firstSong.id).then(blob => {
         if (!blob || !shouldPlaySong() || !state.currentUser) return;
-
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audio.loop = true;
         state.currentSongAudio = audio;
-
         audio.play().catch(() => {});
       }).catch(() => {});
     }
@@ -1832,6 +1838,7 @@
       voicePasswordInput.value = state.currentUser.voicePasswordText || "";
       clearMessage(loginMessage);
       showVault();
+      stopCurrentSong();
     });
 
     document.getElementById("registerVoiceBtn").addEventListener("click", () => {
