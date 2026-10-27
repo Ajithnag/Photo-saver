@@ -5,454 +5,473 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Secure Voice Vault</title>
   <style>
-    :root{
-      --bg:#071521;
-      --bg2:#101d2d;
-      --panel:#122233;
-      --panel2:#1b2f46;
-      --primary:#5ee6ff;
-      --primary2:#8d7dff;
-      --success:#52e6a1;
-      --warning:#ffd166;
-      --danger:#ff6b8a;
-      --text:#edf8ff;
-      --muted:#c2d5ea;
-      --border:rgba(255,255,255,.12);
-      --shadow:0 18px 40px rgba(0,0,0,.28);
+    :root {
+      --bg: #081720;
+      --panel: #122437;
+      --panel-2: #1a2e47;
+      --primary: #5fe4ff;
+      --primary-2: #8d7dff;
+      --success: #58e7a0;
+      --danger: #ff6b8a;
+      --warning: #ffd166;
+      --text: #edf8ff;
+      --muted: #bfd3ea;
+      --border: rgba(255,255,255,.12);
+      --shadow: 0 20px 45px rgba(0,0,0,.3);
     }
 
-    *{box-sizing:border-box}
-    html,body{
-      margin:0;
-      min-height:100%;
-      font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
-      background:
-        radial-gradient(circle at top, #17314e 0%, rgba(14,29,42,.9) 30%, #030c13 100%);
-      color:var(--text);
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at top, #17314a 0%, rgba(9,18,28,.9) 40%, #020c13 100%);
+      color: var(--text);
     }
 
-    body{
-      display:grid;
-      place-items:center;
-      padding:28px;
+    body {
+      display: grid;
+      place-items: center;
+      padding: 24px;
     }
 
-    .app{
-      width:min(1050px,100%);
+    .app {
+      width: min(1050px, 100%);
     }
 
-    .hidden{display:none !important}
+    .hidden { display: none !important; }
 
-    .panel{
-      background:linear-gradient(180deg, rgba(18,34,51,.96), rgba(6,16,25,.98));
-      border:1px solid var(--border);
-      border-radius:24px;
-      box-shadow:var(--shadow);
-      overflow:hidden;
+    .panel {
+      background: linear-gradient(180deg, rgba(18,36,52,.96), rgba(6,16,25,.98));
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
 
-    .auth-panel{
-      padding:26px;
+    .auth-panel { padding: 26px; }
+
+    .tabs {
+      display: flex;
+      gap: 12px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 8px;
+      margin-bottom: 22px;
     }
 
-    .tabs{
-      display:flex;
-      gap:12px;
-      background:rgba(255,255,255,.03);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:8px;
-      margin-bottom:24px;
+    .tab {
+      flex: 1;
+      border: none;
+      border-radius: 12px;
+      background: transparent;
+      color: var(--text);
+      padding: 12px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .2s ease;
     }
 
-    .tab{
-      flex:1;
-      border:none;
-      border-radius:12px;
-      background:transparent;
-      color:var(--text);
-      padding:12px 18px;
-      font-size:1rem;
-      font-weight:700;
-      cursor:pointer;
-      transition:.2s ease;
+    .tab.active {
+      background: linear-gradient(90deg, var(--primary), var(--primary-2));
+      color: #06141d;
     }
 
-    .tab.active{
-      background:linear-gradient(90deg, var(--primary), var(--primary2));
-      color:#06141d;
+    .auth-grid {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 26px;
+      align-items: center;
     }
 
-    .auth-grid{
-      display:grid;
-      grid-template-columns:1.15fr .85fr;
-      gap:26px;
-      align-items:center;
+    .brand {
+      padding: 10px 8px 8px 4px;
     }
 
-    .brand{
-      padding:10px 8px 12px 4px;
+    .brand-badge {
+      display: inline-block;
+      padding: 7px 12px;
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--primary);
+      background: rgba(95,228,255,.08);
+      border: 1px solid rgba(95,228,255,.18);
+      border-radius: 999px;
     }
 
-    .brand-badge{
-      display:inline-block;
-      padding:7px 12px;
-      border-radius:999px;
-      background:rgba(94,230,255,.08);
-      border:1px solid rgba(94,230,255,.2);
-      color:var(--primary);
-      font-size:.72rem;
-      font-weight:700;
-      letter-spacing:.12em;
-      text-transform:uppercase;
+    h1 {
+      margin: 18px 0 15px;
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      line-height: 1.05;
+      letter-spacing: -.06em;
     }
 
-    h1{
-      margin:18px 0 16px;
-      font-size:clamp(2.1rem,4vw,4rem);
-      line-height:1.06;
-      letter-spacing:-.06em;
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.75;
+      max-width: 560px;
     }
 
-    .brand p{
-      margin:0;
-      color:var(--muted);
-      font-size:1.02rem;
-      line-height:1.75;
-      max-width:560px;
+    .features {
+      list-style: none;
+      padding: 0;
+      margin: 26px 0 0;
+      display: grid;
+      gap: 14px;
     }
 
-    .features{
-      list-style:none;
-      padding:0;
-      margin:26px 0 0;
-      display:grid;
-      gap:14px;
+    .features li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+      font-size: .97rem;
     }
 
-    .features li{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      color:var(--text);
-      font-size:.97rem;
+    .check {
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(88,231,160,.10);
+      border: 1px solid rgba(88,231,160,.35);
+      color: var(--success);
+      font-weight: 800;
     }
 
-    .check{
-      width:24px;height:24px;border-radius:50%;
-      display:grid;place-items:center;
-      background:rgba(82,230,161,.10);
-      border:1px solid rgba(82,230,161,.36);
-      color:var(--success);
-      font-weight:800;
+    .card {
+      border-radius: 18px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border);
+      padding: 22px;
     }
 
-    .card{
-      padding:22px;
-      border-radius:18px;
-      background:rgba(255,255,255,.03);
-      border:1px solid var(--border);
+    .card h2 {
+      margin: 0 0 18px;
+      font-size: 1.7rem;
+      letter-spacing: -.04em;
     }
 
-    .card h2{
-      margin:0 0 16px;
-      font-size:1.7rem;
-      letter-spacing:-.04em;
+    .message {
+      display: none;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      font-size: .92rem;
+      line-height: 1.5;
     }
 
-    .message{
-      display:none;
-      border-radius:12px;
-      border:1px solid transparent;
-      padding:12px 14px;
-      margin-bottom:12px;
-      font-size:.92rem;
-      line-height:1.5;
+    .message.show { display: block; }
+
+    .message.success {
+      background: rgba(88,231,160,.08);
+      border-color: rgba(88,231,160,.35);
+      color: #d9ffe9;
     }
 
-    .message.show{display:block}
-    .message.success{
-      background:rgba(82,230,161,.08);
-      border-color:rgba(82,230,161,.32);
-      color:#d7ffef;
-    }
-    .message.error{
-      background:rgba(255,107,138,.08);
-      border-color:rgba(255,107,138,.34);
-      color:#ffdfe8;
-    }
-    .message.info{
-      background:rgba(94,230,255,.08);
-      border-color:rgba(94,230,255,.34);
-      color:#def9ff;
+    .message.error {
+      background: rgba(255,107,138,.08);
+      border-color: rgba(255,107,138,.35);
+      color: #ffdfe7;
     }
 
-    .field{
-      display:grid;
-      gap:8px;
-      margin-bottom:14px;
+    .message.info {
+      background: rgba(95,228,255,.08);
+      border-color: rgba(95,228,255,.35);
+      color: #def9ff;
     }
 
-    label{
-      color:var(--muted);
-      font-size:.82rem;
-      letter-spacing:.02em;
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
     }
 
-    input, select, button{
-      font:inherit;
+    label {
+      color: var(--muted);
+      font-size: .82rem;
+      letter-spacing: .02em;
     }
 
-    input, select{
-      width:100%;
-      background:rgba(255,255,255,.04);
-      border:1px solid var(--border);
-      color:var(--text);
-      border-radius:12px;
-      padding:12px 14px;
-      outline:none;
+    input, select, button {
+      font: inherit;
     }
 
-    input::placeholder{color:rgba(237,248,255,.5)}
-
-    .otp-wrap{
-      display:grid;
-      grid-template-columns:1fr 170px;
-      gap:10px;
-      align-items:end;
+    input, select {
+      width: 100%;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 14px;
+      outline: none;
     }
 
-    .btn{
-      width:100%;
-      border:none;
-      border-radius:12px;
-      padding:12px 16px;
-      font-weight:700;
-      cursor:pointer;
-      transition:transform .15s ease, opacity .15s ease;
+    input::placeholder {
+      color: rgba(237,248,255,.55);
     }
 
-    .btn:hover{transform:translateY(-1px)}
-    .btn:active{transform:translateY(0)}
-
-    .btn.primary{
-      background:linear-gradient(90deg, var(--primary), var(--primary2));
-      color:#06141d;
-      box-shadow:0 12px 22px rgba(94,230,255,.18);
+    .otp-wrap {
+      display: grid;
+      grid-template-columns: 1fr 170px;
+      gap: 10px;
+      align-items: end;
     }
 
-    .btn.secondary{
-      background:rgba(255,255,255,.04);
-      color:var(--text);
-      border:1px solid var(--border);
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s ease, opacity .15s ease;
     }
 
-    .btn.danger{
-      background:rgba(255,107,138,.12);
-      border:1px solid rgba(255,107,138,.42);
-      color:#ffe5ec;
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn.primary {
+      background: linear-gradient(90deg, var(--primary), var(--primary-2));
+      color: #06141d;
+      box-shadow: 0 12px 22px rgba(95,228,255,.18);
     }
 
-    .vault{
-      background:linear-gradient(180deg, rgba(18,34,51,.96), rgba(6,16,25,.98));
-      border:1px solid var(--border);
-      border-radius:24px;
-      box-shadow:var(--shadow);
-      overflow:hidden;
+    .btn.secondary {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      color: var(--text);
     }
 
-    .vault-header{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:16px;
-      padding:22px 24px 18px;
-      border-bottom:1px solid var(--border);
-      background:rgba(255,255,255,.02);
+    .btn.danger {
+      background: rgba(255,107,138,.12);
+      border: 1px solid rgba(255,107,138,.42);
+      color: #ffe5ec;
     }
 
-    .vault-header h2{
-      margin:0;
-      font-size:clamp(1.7rem,3vw,2.8rem);
-      letter-spacing:-.05em;
+    .vault {
+      background: linear-gradient(180deg, rgba(18,36,52,.96), rgba(6,16,25,.98));
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
 
-    .user-pill{
-      background:rgba(255,255,255,.04);
-      border:1px solid var(--border);
-      padding:9px 12px;
-      border-radius:999px;
-      color:var(--muted);
-      font-size:.78rem;
-      white-space:nowrap;
+    .vault-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.02);
     }
 
-    .vault-body{
-      padding:20px 24px 28px;
+    .vault-header h2 {
+      margin: 0;
+      font-size: clamp(1.7rem, 3vw, 2.8rem);
+      letter-spacing: -.05em;
     }
 
-    .toolbar{
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
-      margin-bottom:18px;
+    .user-pill {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      padding: 9px 12px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: .78rem;
+      white-space: nowrap;
     }
 
-    .toolbar .btn{
-      min-width:180px;
+    .vault-body {
+      padding: 20px 24px 28px;
     }
 
-    .status{
-      min-height:52px;
-      display:flex;
-      align-items:center;
-      border-radius:12px;
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.03);
-      padding:12px 14px;
-      color:var(--muted);
-      margin-bottom:18px;
-      line-height:1.5;
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
     }
 
-    .upload-box{
-      border:1px dashed rgba(94,230,255,.38);
-      background:rgba(255,255,255,.02);
-      border-radius:14px;
-      padding:18px;
-      margin-bottom:22px;
+    .toolbar .btn {
+      min-width: 180px;
     }
 
-    .upload-box input[type=file]{
-      width:100%;
-      border:none;
-      background:transparent;
-      padding:8px 0;
-      color:var(--text);
+    .status {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      padding: 12px 14px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.5;
     }
 
-    .upload-box small{
-      display:block;
-      color:var(--muted);
-      margin-top:10px;
-      line-height:1.6;
+    .upload-box {
+      border: 1px dashed rgba(95,228,255,.38);
+      background: rgba(255,255,255,.02);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 22px;
     }
 
-    .locker-title{
-      margin:0 0 14px;
-      font-size:1.15rem;
-      letter-spacing:.02em;
+    .upload-box input[type=file] {
+      width: 100%;
+      border: none;
+      background: transparent;
+      padding: 8px 0;
+      color: var(--text);
     }
 
-    .media-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
-      gap:18px;
+    .upload-box small {
+      display: block;
+      color: var(--muted);
+      margin-top: 10px;
+      line-height: 1.6;
     }
 
-    .media-card{
-      position:relative;
-      background:rgba(255,255,255,.02);
-      border:1px solid var(--border);
-      border-radius:14px;
-      overflow:hidden;
-      height:260px;
-      display:flex;
-      flex-direction:column;
-      box-shadow:0 10px 22px rgba(0,0,0,.18);
+    .locker-title {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+      letter-spacing: .02em;
     }
 
-    .media-card img, .media-card video{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-      background:#0c1723;
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 18px;
     }
 
-    .meta{
-      position:absolute;
-      inset:auto 0 0 0;
-      padding:12px 12px 10px;
-      background:linear-gradient(180deg, transparent, rgba(0,0,0,.72));
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-      font-size:.78rem;
-      color:var(--text);
+    .media-card {
+      position: relative;
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      height: 260px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 22px rgba(0,0,0,.18);
     }
 
-    .tag{
-      display:inline-flex;
-      padding:5px 8px;
-      border-radius:999px;
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.1);
-      font-size:.72rem;
-      color:#ebf7ff;
+    .media-card img, .media-card video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #0b1721;
     }
 
-    .media-card.locked::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background:rgba(3,10,16,.60);
-      z-index:2;
+    .meta {
+      position: absolute;
+      inset: auto 0 0 0;
+      padding: 12px 12px 10px;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,.72));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: .78rem;
+      color: var(--text);
     }
 
-    .lock-overlay{
-      position:absolute;
-      inset:0;
-      z-index:3;
-      display:grid;
-      place-items:center;
-      text-align:center;
-      padding:18px;
+    .tag {
+      display: inline-flex;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.1);
+      font-size: .72rem;
+      color: #ebf7ff;
     }
 
-    .lock-badge{
-      display:inline-block;
-      padding:8px 12px;
-      border-radius:999px;
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.12);
-      font-size:.72rem;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      margin-bottom:12px;
+    .media-card.locked::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(3,12,18,.6);
+      z-index: 2;
     }
 
-    .lock-btn{
-      width:100%;
-      border:none;
-      border-radius:10px;
-      background:linear-gradient(90deg, #ffd166, #ffb13d);
-      color:#20140a;
-      font-weight:700;
-      padding:10px 14px;
-      cursor:pointer;
+    .lock-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 18px;
     }
 
-    .empty{
-      padding:18px;
-      border:1px dashed rgba(255,255,255,.14);
-      border-radius:12px;
-      text-align:center;
-      color:var(--muted);
-      background:rgba(255,255,255,.02);
+    .lock-badge {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
     }
 
-    @media (max-width:820px){
-      .auth-grid{grid-template-columns:1fr}
-      .brand{padding:0}
+    .lock-btn {
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #ffd166, #ffb13d);
+      color: #20140a;
+      font-weight: 700;
+      padding: 10px 14px;
+      cursor: pointer;
     }
 
-    @media (max-width:560px){
-      .otp-wrap{grid-template-columns:1fr}
-      .toolbar{flex-direction:column}
-      .toolbar .btn{width:100%;min-width:0}
-      .vault-header{flex-direction:column;align-items:flex-start}
+    .empty {
+      padding: 18px;
+      border: 1px dashed rgba(255,255,255,.14);
+      border-radius: 12px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255,255,255,.02);
+    }
+
+    @media (max-width: 820px) {
+      .auth-grid {
+        grid-template-columns: 1fr;
+      }
+      .brand {
+        padding: 0;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .otp-wrap {
+        grid-template-columns: 1fr;
+      }
+      .toolbar {
+        flex-direction: column;
+      }
+      .toolbar .btn {
+        width: 100%;
+        min-width: 0;
+      }
+      .vault-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
@@ -464,21 +483,21 @@
         <button id="signupTab" class="tab" type="button">Sign Up</button>
       </div>
 
-      <div id="loginView" class="view">
+      <div id="loginView">
         <div class="auth-grid">
           <div class="brand">
             <div class="brand-badge">Secure Voice Vault</div>
             <h1>Protect your private photos and videos with your own voice.</h1>
             <p>
-              Store up to 15 photos and videos while each file stays locked until your real voice note matches
-              the voice profile registered in your account.
+              Store up to 15 photos and videos. Every media item is locked until
+              your voice note matches your registered voice profile.
             </p>
 
             <ul class="features">
-              <li><span class="check">✓</span> Voice-verified unlock</li>
+              <li><span class="check">✓</span> Voice-based unlocking</li>
               <li><span class="check">✓</span> Up to 15 photos</li>
-              <li><span class="check">✓</span> Videos up to 10 MB each</li>
-              <li><span class="check">✓</span> Phone login with country code and OTP</li>
+              <li><span class="check">✓</span> Video up to 10 MB each</li>
+              <li><span class="check">✓</span> Login with email and password</li>
             </ul>
           </div>
 
@@ -488,18 +507,13 @@
 
             <form id="loginForm">
               <div class="field">
-                <label for="loginCountryCode">Country Code</label>
-                <select id="loginCountryCode"></select>
-              </div>
-
-              <div class="field">
-                <label for="loginPhone">Phone Number</label>
-                <input id="loginPhone" type="tel" placeholder="e.g. 9876543210" required />
+                <label for="loginEmail">Email ID</label>
+                <input id="loginEmail" name="loginEmail" type="email" placeholder="Enter your email" required />
               </div>
 
               <div class="field">
                 <label for="loginPassword">Password</label>
-                <input id="loginPassword" type="password" placeholder="Enter your password" required />
+                <input id="loginPassword" name="loginPassword" type="password" placeholder="Enter your password" required />
               </div>
 
               <button class="btn primary" type="submit">Login</button>
@@ -508,20 +522,19 @@
         </div>
       </div>
 
-      <div id="signupView" class="view hidden">
+      <div id="signupView" class="hidden">
         <div class="auth-grid">
           <div class="brand">
             <div class="brand-badge">Secure Voice Vault</div>
-            <h1>Create your account and register your voice for unlock.</h1>
+            <h1>Create your account and register your voice for unlocking.</h1>
             <p>
-              Sign up with your phone number, generate an OTP, set your password, and register your voice.
-              Only the matching voice can unlock the media.
+              Sign up using email and password. Optional phone + OTP can also be enabled for extra verification.
             </p>
 
             <ul class="features">
-              <li><span class="check">✓</span> Generate OTP using country code</li>
+              <li><span class="check">✓</span> Email + password signup</li>
               <li><span class="check">✓</span> Voice profile registration</li>
-              <li><span class="check">✓</span> Secure private gallery</li>
+              <li><span class="check">✓</span> Locked media vault</li>
             </ul>
           </div>
 
@@ -532,28 +545,43 @@
             <form id="signupForm">
               <div class="field">
                 <label for="signupName">Full Name</label>
-                <input id="signupName" type="text" placeholder="Enter your name" required />
+                <input id="signupName" name="signupName" type="text" placeholder="Enter your full name" required />
               </div>
 
               <div class="field">
-                <label for="signupCountryCode">Country Code</label>
-                <select id="signupCountryCode"></select>
-              </div>
-
-              <div class="field">
-                <label for="signupPhone">Phone Number</label>
-                <input id="signupPhone" type="tel" placeholder="e.g. 9876543210" required />
+                <label for="signupEmail">Email ID</label>
+                <input id="signupEmail" name="signupEmail" type="email" placeholder="Enter your email" required />
               </div>
 
               <div class="field">
                 <label for="signupPassword">Password</label>
-                <input id="signupPassword" type="password" placeholder="Create password" required />
+                <input id="signupPassword" name="signupPassword" type="password" placeholder="Create password" required />
+              </div>
+
+              <div class="field">
+                <label for="signupCountryCode">Country Code (Optional)</label>
+                <select id="signupCountryCode" name="signupCountryCode">
+                  <option value="+91">+91</option>
+                  <option value="+1">+1</option>
+                  <option value="+44">+44</option>
+                  <option value="+61">+61</option>
+                  <option value="+65">+65</option>
+                  <option value="+81">+81</option>
+                  <option value="+971">+971</option>
+                  <option value="+966">+966</option>
+                  <option value="+92">+92</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="signupPhone">Phone Number (Optional)</label>
+                <input id="signupPhone" name="signupPhone" type="tel" placeholder="Optional phone number" />
               </div>
 
               <div class="otp-wrap">
                 <div class="field">
-                  <label for="signupOtp">OTP</label>
-                  <input id="signupOtp" type="text" placeholder="Enter OTP" />
+                  <label for="signupOtp">OTP (Optional)</label>
+                  <input id="signupOtp" name="signupOtp" type="text" placeholder="Enter OTP if phone used" />
                 </div>
                 <button id="sendOtpBtn" class="btn secondary" type="button">Send OTP</button>
               </div>
@@ -583,7 +611,7 @@
         <div class="upload-box">
           <input id="mediaUpload" type="file" accept="image/*,video/*" multiple />
           <small>
-            Upload up to 15 photos total. Video files are limited to 10 MB each. All media is locked until your
+            Upload up to 15 photos. Videos are limited to 10 MB each. All media stays locked until your
             registered voice matches the voice note.
           </small>
         </div>
@@ -595,14 +623,13 @@
   </div>
 
   <script>
-    const COUNTRY_CODES = [
-      "+1","+7","+20","+27","+30","+31","+32","+33","+34","+36","+39","+40","+41","+43","+44","+45","+46","+47","+48","+51","+52","+53","+54","+55","+61","+62","+63","+64","+65","+66","+81","+82","+84","+86","+90","+91","+92","+93","+94","+95","+971","+972","+973","+974","+975","+976","+977","+992","+993","+994","+995","+996","+998"
-    ];
-
     const USERS_KEY = "secure_voice_vault_users";
+    const MAX_PHOTOS = 15;
+    const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+
     const state = {
       currentUser: null,
-      otp: null,
+      generatedOtp: null,
       activeTab: "login"
     };
 
@@ -612,19 +639,11 @@
     const signupTab = document.getElementById("signupTab");
     const loginView = document.getElementById("loginView");
     const signupView = document.getElementById("signupView");
-
     const loginMessage = document.getElementById("loginMessage");
     const signupMessage = document.getElementById("signupMessage");
-    const sendOtpBtn = document.getElementById("sendOtpBtn");
-    const signupForm = document.getElementById("signupForm");
-    const loginForm = document.getElementById("loginForm");
-    const mediaUpload = document.getElementById("mediaUpload");
-    const mediaGrid = document.getElementById("mediaGrid");
     const vaultStatus = document.getElementById("vaultStatus");
+    const mediaGrid = document.getElementById("mediaGrid");
     const userIdentity = document.getElementById("userIdentity");
-    const registerVoiceBtn = document.getElementById("registerVoiceBtn");
-    const unlockAllBtn = document.getElementById("unlockAllBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
 
     function setMessage(el, text, type) {
       el.textContent = text;
@@ -646,24 +665,6 @@
 
     function saveUsers(users) {
       localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    }
-
-    function populateCountryCodes() {
-      const selects = [
-        document.getElementById("loginCountryCode"),
-        document.getElementById("signupCountryCode")
-      ];
-
-      selects.forEach((select) => {
-        select.innerHTML = "";
-        COUNTRY_CODES.forEach(code => {
-          const option = document.createElement("option");
-          option.value = code;
-          option.textContent = code;
-          if (code === "+91") option.selected = true;
-          select.appendChild(option);
-        });
-      });
     }
 
     function switchTab(tab) {
@@ -694,14 +695,15 @@
     function showVault() {
       authPanel.classList.add("hidden");
       vaultPanel.classList.remove("hidden");
-      userIdentity.textContent = `${state.currentUser.name} • ${state.currentUser.phone}`;
+      userIdentity.textContent = `${state.currentUser.name} • ${state.currentUser.email}`;
       renderMedia();
+
       if (!state.currentUser.voiceProfile) {
         setVaultStatus("Voice not yet registered. Register your voice before unlocking the vault.", "info");
       } else {
-        const unlockedCount = state.currentUser.media.filter(item => item.unlocked).length;
-        if (unlockedCount > 0) {
-          setVaultStatus(`Voice matched. ${unlockedCount} media item(s) are unlocked.`, "success");
+        const unlocked = state.currentUser.media.filter(item => item.unlocked).length;
+        if (unlocked > 0) {
+          setVaultStatus(`Voice matched. ${unlocked} media item(s) unlocked.`, "success");
         } else {
           setVaultStatus("Voice registered. Record a matching voice note to unlock the vault.", "info");
         }
@@ -712,78 +714,77 @@
       vaultStatus.textContent = message;
       vaultStatus.style.background =
         type === "success"
-          ? "rgba(82,230,161,.08)"
+          ? "rgba(88,231,160,.08)"
           : type === "error"
           ? "rgba(255,107,138,.08)"
           : "rgba(255,255,255,.03)";
       vaultStatus.style.borderColor =
         type === "success"
-          ? "rgba(82,230,161,.32)"
+          ? "rgba(88,231,160,.35)"
           : type === "error"
-          ? "rgba(255,107,138,.32)"
-          : "rgba(94,230,255,.32)";
+          ? "rgba(255,107,138,.35)"
+          : "rgba(95,228,255,.35)";
     }
 
     function saveCurrentUser() {
       const users = getUsers();
-      const index = users.findIndex(u => u.phone === state.currentUser.phone);
-      if (index >= 0) {
-        users[index] = { ...state.currentUser };
+      const idx = users.findIndex(u => u.email === state.currentUser.email);
+      if (idx >= 0) {
+        users[idx] = { ...state.currentUser };
       } else {
         users.push({ ...state.currentUser });
       }
       saveUsers(users);
     }
 
-    function createMediaItem(file) {
+    function validateNewFiles(files) {
+      const currentCount = state.currentUser.media.length;
+      if (currentCount + files.length > MAX_PHOTOS) {
+        throw new Error(`You can store only ${MAX_PHOTOS} media items total.`);
+      }
+
+      for (const file of files) {
+        if (file.type.startsWith("video/") && file.size > MAX_VIDEO_SIZE) {
+          throw new Error(`Video too large: ${file.name}. Maximum size is 10 MB.`);
+        }
+      }
+    }
+
+    function readFileAsDataURL(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-          resolve({
-            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            name: file.name,
-            type: file.type,
-            dataUrl: reader.result,
-            locked: true,
-            unlocked: false
-          });
-        };
+        reader.onload = () => resolve(reader.result);
         reader.onerror = () => reject(new Error("Failed to read file"));
         reader.readAsDataURL(file);
       });
     }
 
-    function validateNewFiles(files) {
-      const existing = state.currentUser.media.length;
-      const totalAllowed = 15;
-      const incoming = Array.from(files).length;
-
-      if (existing + incoming > totalAllowed) {
-        throw new Error(`You can only store ${totalAllowed} media files total.`);
-      }
-
-      for (const file of files) {
-        if (file.type.startsWith("video/") && file.size > 10 * 1024 * 1024) {
-          throw new Error(`Video is too large: ${file.name}. Maximum is 10 MB.`);
-        }
-      }
-    }
-
     async function handleMediaUpload(event) {
-      if (!state.currentUser) return;
       const files = Array.from(event.target.files || []);
       if (!files.length) return;
 
       try {
         validateNewFiles(files);
-        const items = await Promise.all(files.map(createMediaItem));
+
+        const items = await Promise.all(files.map(async (file) => {
+          const dataUrl = await readFileAsDataURL(file);
+          return {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            name: file.name,
+            type: file.type,
+            dataUrl,
+            locked: true,
+            unlocked: false
+          };
+        }));
+
         state.currentUser.media.push(...items);
         saveCurrentUser();
         renderMedia();
         setVaultStatus(`${items.length} file(s) uploaded and locked until voice unlock.`, "info");
         event.target.value = "";
-      } catch (err) {
-        setVaultStatus(err.message || "File upload failed.", "error");
+      } catch (error) {
+        setVaultStatus(error.message || "File upload failed.", "error");
         event.target.value = "";
       }
     }
@@ -810,7 +811,6 @@
           const video = document.createElement("video");
           video.src = item.dataUrl;
           video.controls = true;
-          video.muted = false;
           card.appendChild(video);
         }
 
@@ -818,7 +818,7 @@
         meta.className = "meta";
         meta.innerHTML = `
           <span class="tag">${item.type.startsWith("image/") ? "Photo" : "Video"}</span>
-          <span>${item.name.length > 12 ? item.name.slice(0,12) + "..." : item.name}</span>
+          <span>${item.name.length > 12 ? item.name.slice(0, 12) + "..." : item.name}</span>
         `;
         card.appendChild(meta);
 
@@ -855,21 +855,23 @@
     function zeroCrossingRate(signal) {
       let crossings = 0;
       for (let i = 1; i < signal.length; i++) {
-        if ((signal[i] >= 0 && signal[i - 1] < 0) || (signal[i] < 0 && signal[i - 1] >= 0)) crossings++;
+        if ((signal[i] >= 0 && signal[i - 1] < 0) || (signal[i] < 0 && signal[i - 1] >= 0)) {
+          crossings++;
+        }
       }
       return crossings / Math.max(signal.length - 1, 1);
     }
 
-    function createSpectrum(signal, bins = 30) {
+    function makeSpectrum(signal, bins = 30) {
       const data = normalizeSignal(signal);
-      const length = Math.min(data.length, 8192);
+      const len = Math.min(data.length, 8192);
       const spec = Array.from({ length: bins }, () => 0);
 
       for (let k = 0; k < bins; k++) {
         let real = 0;
         let imag = 0;
-        for (let n = 0; n < length; n++) {
-          const angle = -2 * Math.PI * k * n / length;
+        for (let n = 0; n < len; n++) {
+          const angle = -2 * Math.PI * k * n / len;
           real += data[n] * Math.cos(angle);
           imag += data[n] * Math.sin(angle);
         }
@@ -906,17 +908,14 @@
     function extractAudioProfile(audioBuffer) {
       const channel = audioBuffer.getChannelData(0);
       const normalized = normalizeSignal(channel);
-      const rms = Math.sqrt(normalized.reduce((sum, v) => sum + (v * v), 0) / normalized.length);
+      const rms = Math.sqrt(
+        normalized.reduce((sum, v) => sum + (v * v), 0) / normalized.length
+      );
       const zcr = zeroCrossingRate(normalized);
-      const spectrum = createSpectrum(normalized, 32);
+      const spectrum = makeSpectrum(normalized, 32);
       const pitch = estimatePitch(normalized, audioBuffer.sampleRate);
 
-      return {
-        rms,
-        zcr,
-        pitch,
-        spectrum
-      };
+      return { rms, zcr, pitch, spectrum };
     }
 
     function compareProfiles(a, b) {
@@ -944,8 +943,8 @@
         (1 - Math.min(pitchDiff / 200, 1)) * 0.07;
 
       return {
-        score,
         pass: score > 0.72,
+        score,
         cosine,
         zcrDiff,
         rmsDiff,
@@ -954,7 +953,8 @@
     }
 
     async function decodeVoiceBlob(blob) {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioCtx();
       const arrayBuffer = await blob.arrayBuffer();
       const decoded = await audioContext.decodeAudioData(arrayBuffer.slice(0));
       const profile = extractAudioProfile(decoded);
@@ -970,8 +970,8 @@
         const recorder = new MediaRecorder(stream);
         const chunks = [];
 
-        recorder.ondataavailable = e => {
-          if (e.data.size > 0) chunks.push(e.data);
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) chunks.push(event.data);
         };
 
         recorder.onstop = async () => {
@@ -1014,14 +1014,12 @@
           if (mode === "unlock-single") {
             if (result.pass) {
               state.currentUser.media = state.currentUser.media.map(item => {
-                if (item.id === itemId) {
-                  return { ...item, locked: false, unlocked: true };
-                }
+                if (item.id === itemId) return { ...item, locked: false, unlocked: true };
                 return item;
               });
               saveCurrentUser();
               renderMedia();
-              setVaultStatus(`Voice verified. This media item unlocked. Match score: ${result.score.toFixed(2)}`, "success");
+              setVaultStatus(`Voice verified. This media item is unlocked. Match score: ${result.score.toFixed(2)}`, "success");
             } else {
               setVaultStatus(`Voice mismatch. This item remains locked. Match score: ${result.score.toFixed(2)}`, "error");
             }
@@ -1031,82 +1029,96 @@
         setVaultStatus("Recording voice note... Please speak clearly for 3 seconds.", "info");
         recorder.start();
         setTimeout(() => recorder.stop(), 3000);
-      } catch (e) {
+      } catch (error) {
         setVaultStatus("Microphone access is required for voice verification.", "error");
       }
     }
+
+    loginTab.addEventListener("click", () => switchTab("login"));
+    signupTab.addEventListener("click", () => switchTab("signup"));
 
     document.getElementById("sendOtpBtn").addEventListener("click", () => {
       const phone = document.getElementById("signupPhone").value.trim();
       const countryCode = document.getElementById("signupCountryCode").value;
 
       if (!phone) {
-        setMessage(signupMessage, "Please enter your phone number first.", "error");
+        setMessage(signupMessage, "Enter a phone number before requesting OTP.", "error");
         return;
       }
 
-      state.otp = generateOtp();
-      setMessage(signupMessage, `Demo OTP sent to ${countryCode}${phone}: ${state.otp}`, "success");
+      state.generatedOtp = generateOtp();
+      setMessage(signupMessage, `Demo OTP sent to ${countryCode}${phone}: ${state.generatedOtp}`, "success");
     });
 
-    signupForm.addEventListener("submit", (e) => {
-      e.preventDefault();
+    signupForm = document.getElementById("signupForm");
+    loginForm = document.getElementById("loginForm");
+
+    signupForm.addEventListener("submit", (event) => {
+      event.preventDefault();
 
       const name = document.getElementById("signupName").value.trim();
-      const countryCode = document.getElementById("signupCountryCode").value;
-      const phoneInput = document.getElementById("signupPhone").value.trim();
+      const email = document.getElementById("signupEmail").value.trim().toLowerCase();
       const password = document.getElementById("signupPassword").value;
+      const phone = document.getElementById("signupPhone").value.trim();
+      const phoneCode = document.getElementById("signupCountryCode").value;
       const otpInput = document.getElementById("signupOtp").value.trim();
 
-      try {
-        if (!name || !phoneInput || !password) {
-          throw new Error("Please fill in all fields.");
-        }
-        if (!state.otp) {
-          throw new Error("Please generate an OTP first.");
-        }
-        if (otpInput !== state.otp) {
-          throw new Error("Invalid OTP. Please enter the correct OTP.");
-        }
-
-        const phone = formatPhone(countryCode, phoneInput);
-        const users = getUsers();
-        if (users.some(u => u.phone === phone)) {
-          throw new Error("This phone number already exists.");
-        }
-
-        const user = {
-          id: Date.now().toString(),
-          name,
-          phone,
-          countryCode,
-          password,
-          voiceProfile: null,
-          media: []
-        };
-
-        users.push(user);
-        saveUsers(users);
-        state.currentUser = user;
-        clearMessage(signupMessage);
-        showVault();
-      } catch (err) {
-        setMessage(signupMessage, err.message || "Signup failed.", "error");
+      if (!name || !email || !password) {
+        setMessage(signupMessage, "Name, email, and password are required.", "error");
+        return;
       }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setMessage(signupMessage, "Please enter a valid email address.", "error");
+        return;
+      }
+
+      if (phone) {
+        if (!state.generatedOtp) {
+          setMessage(signupMessage, "Please generate an OTP first.", "error");
+          return;
+        }
+        if (otpInput !== state.generatedOtp) {
+          setMessage(signupMessage, "Invalid OTP. Please enter the correct OTP.", "error");
+          return;
+        }
+      }
+
+      const users = getUsers();
+      if (users.some(u => u.email === email)) {
+        setMessage(signupMessage, "This email is already registered.", "error");
+        return;
+      }
+
+      const user = {
+        id: Date.now().toString(),
+        name,
+        email,
+        password,
+        phone: phone ? formatPhone(phoneCode, phone) : "",
+        countryCode: phone ? phoneCode : "",
+        voiceProfile: null,
+        media: []
+      };
+
+      users.push(user);
+      saveUsers(users);
+      state.currentUser = user;
+      clearMessage(signupMessage);
+      showVault();
     });
 
-    loginForm.addEventListener("submit", (e) => {
-      e.preventDefault();
+    loginForm.addEventListener("submit", (event) => {
+      event.preventDefault();
 
-      const countryCode = document.getElementById("loginCountryCode").value;
-      const phone = formatPhone(countryCode, document.getElementById("loginPhone").value);
+      const email = document.getElementById("loginEmail").value.trim().toLowerCase();
       const password = document.getElementById("loginPassword").value;
 
       const users = getUsers();
-      const user = users.find(u => u.phone === phone && u.password === password);
+      const user = users.find(u => u.email === email && u.password === password);
 
       if (!user) {
-        setMessage(loginMessage, "Invalid phone number or password.", "error");
+        setMessage(loginMessage, "Invalid email or password.", "error");
         return;
       }
 
@@ -1115,37 +1127,40 @@
       showVault();
     });
 
-    registerVoiceBtn.addEventListener("click", () => startRecording("register"));
-    unlockAllBtn.addEventListener("click", () => startRecording("unlock-all"));
-    logoutBtn.addEventListener("click", () => {
-      state.currentUser = null;
-      state.otp = null;
-      document.getElementById("signupOtp").value = "";
-      authPanel.classList.remove("hidden");
-      vaultPanel.classList.add("hidden");
-      switchTab(state.activeTab);
-      clearMessage(loginMessage);
-      clearMessage(signupMessage);
+    document.getElementById("registerVoiceBtn").addEventListener("click", () => {
+      startRecording("register");
     });
 
-    mediaUpload.addEventListener("change", handleMediaUpload);
+    document.getElementById("unlockAllBtn").addEventListener("click", () => {
+      startRecording("unlock-all");
+    });
 
-    populateCountryCodes();
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      state.currentUser = null;
+      state.generatedOtp = null;
+      document.getElementById("signupOtp").value = "";
+      showAuth();
+    });
+
+    document.getElementById("mediaUpload").addEventListener("change", handleMediaUpload);
+
     switchTab("login");
     showAuth();
 
-    // Optional sample account
     const existingUsers = getUsers();
     if (!existingUsers.length) {
-      saveUsers([{
-        id:"demo-user",
-        name:"Demo User",
-        phone:"+919876543210",
-        countryCode:"+91",
-        password:"demo123",
-        voiceProfile:null,
-        media:[]
-      }]);
+      saveUsers([
+        {
+          id: "demo-user",
+          name: "Demo User",
+          email: "demo@example.com",
+          password: "demo123",
+          phone: "",
+          countryCode: "",
+          voiceProfile: null,
+          media: []
+        }
+      ]);
     }
   </script>
 </body>
