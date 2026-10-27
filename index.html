@@ -218,6 +218,22 @@
       align-items: end;
     }
 
+    .voice-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 12px;
+    }
+
+    .voice-row input {
+      min-width: 0;
+    }
+
+    .voice-row button {
+      min-width: 170px;
+    }
+
     .btn {
       width: 100%;
       border: none;
@@ -467,22 +483,6 @@
       text-align: center;
       color: var(--muted);
       background: rgba(255,255,255,.02);
-    }
-
-    .voice-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      margin-top: 10px;
-      margin-bottom: 12px;
-    }
-
-    .voice-row input {
-      min-width: 0;
-    }
-
-    .voice-row button {
-      min-width: 170px;
     }
 
     .viewer-overlay {
@@ -750,12 +750,17 @@
   </div>
 
   <script>
+    // NOTE:
+    // If old broken data is already stored, clear it once in the browser console:
+    // localStorage.removeItem("secure_voice_vault_users");
+    // indexedDB.deleteDatabase("secure_voice_vault_media");
+
     const USERS_KEY = "secure_voice_vault_users";
     const MEDIA_DB = "secure_voice_vault_media";
     const MEDIA_STORE = "media";
     const MAX_ITEMS = 15;
     const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
-    const VOICE_MATCH_THRESHOLD = 0.82;
+    const VOICE_MATCH_THRESHOLD = 0.88;
 
     const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
     const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm", ".avi", ".mkv", ".3gp", ".mpeg", ".mpg"];
@@ -1284,9 +1289,9 @@
 
       const pass =
         score > VOICE_MATCH_THRESHOLD &&
-        cosine > 0.78 &&
-        pitchDiff < 90 &&
-        zcrDiff < 0.4;
+        cosine > 0.82 &&
+        pitchDiff < 85 &&
+        zcrDiff < 0.35;
 
       return {
         pass,
@@ -1327,9 +1332,14 @@
           const profile = await decodeVoiceBlob(blob);
 
           if (mode === "register" || mode === "change") {
+            const phraseText = (state.currentUser.voicePasswordText || "").trim();
+            if (!phraseText) {
+              setVaultStatus("Please set a voice password phrase before registering your voice.", "error");
+              return;
+            }
+
             state.currentUser.voiceProfile = profile;
             state.currentUser.voicePasswordProfile = profile;
-            state.currentUser.voicePasswordText = (state.currentUser.voicePasswordText || "").trim() || (document.getElementById("signupVoicePassword")?.value || "").trim() || "unlock-now-123";
             saveUserOnly(state.currentUser);
 
             if (mode === "change") {
