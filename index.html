@@ -800,9 +800,9 @@
         <div class="song-section">
           <h3 class="locker-title" style="margin-bottom: 8px;">Songs</h3>
 
-          <input id="songUpload" type="file" accept="audio/*" />
+          <input id="songUpload" type="file" accept="audio/*,video/*" />
           <small style="display:block; margin-top:10px; color: var(--muted);">
-            Upload songs up to 30 MB. The song plays only when the vault is unlocked and stops when the vault is locked again.
+            Upload songs up to 30 MB. Supports mp3, mp4, and other common audio/video files. The song plays only when the vault is unlocked and stops when the vault is locked again.
           </small>
 
           <div id="songList" class="song-list"></div>
@@ -834,7 +834,7 @@
 
     const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
     const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm", ".avi", ".mkv", ".3gp", ".mpeg", ".mpg"];
-    const AUDIO_EXTENSIONS = [".mp3", ".wav", ".m4a", ".aac", ".ogg"];
+    const AUDIO_EXTENSIONS = [".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac", ".m4b", ".wma"];
 
     const state = {
       currentUser: null,
@@ -884,6 +884,15 @@
       const type = (file.type || "").toLowerCase();
       const name = (file.name || "").toLowerCase();
       return type.startsWith("audio/") || AUDIO_EXTENSIONS.some(ext => name.endsWith(ext));
+    }
+
+    function isSongFile(file) {
+      const type = (file.type || "").toLowerCase();
+      const name = (file.name || "").toLowerCase();
+
+      const acceptableAudio = type.startsWith("audio/") || AUDIO_EXTENSIONS.some(ext => name.endsWith(ext));
+      const acceptableVideo = type.startsWith("video/") || VIDEO_EXTENSIONS.some(ext => name.endsWith(ext));
+      return acceptableAudio || acceptableVideo;
     }
 
     function setMessage(el, text, type) {
@@ -1123,11 +1132,9 @@
       const name = (file.name || "").toLowerCase();
       const type = (file.type || "").toLowerCase();
 
-      const isSupported =
-        type.startsWith("audio/") ||
-        AUDIO_EXTENSIONS.some(ext => name.endsWith(ext));
+      const supported = isSongFile(file);
 
-      if (!isSupported) {
+      if (!supported) {
         throw new Error(`Unsupported song type: ${file.name}`);
       }
 
@@ -1148,7 +1155,6 @@
       if (!state.currentUser) return false;
       const media = state.currentUser.media || [];
       if (!media.length) return false;
-
       return media.every(item => item.unlocked);
     }
 
@@ -1209,8 +1215,7 @@
             kind
           };
 
-          const blob = file;
-          await saveMediaBlob({ ...item, blob });
+          await saveMediaBlob({ ...item, blob: file });
           items.push(item);
         }
 
