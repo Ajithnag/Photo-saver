@@ -725,6 +725,7 @@
     const MEDIA_STORE = "media";
     const MAX_ITEMS = 15;
     const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+    const VOICE_MATCH_THRESHOLD = 0.82;
 
     const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
     const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm", ".avi", ".mkv", ".3gp", ".mpeg", ".mpg"];
@@ -1246,8 +1247,14 @@
         (1 - Math.min(rmsDiff / 0.6, 1)) * 0.10 +
         (1 - Math.min(pitchDiff / 200, 1)) * 0.07;
 
+      const pass =
+        score > VOICE_MATCH_THRESHOLD &&
+        cosine > 0.78 &&
+        pitchDiff < 90 &&
+        zcrDiff < 0.4;
+
       return {
-        pass: score > 0.72,
+        pass,
         score,
         cosine,
         zcrDiff,
@@ -1316,7 +1323,7 @@
               renderMedia();
               setVaultStatus(`Voice note verified. Vault unlocked. Match score: ${result.score.toFixed(2)}`, "success");
             } else {
-              setVaultStatus(`Voice note did not match. Try again. Match score: ${result.score.toFixed(2)}`, "error");
+              setVaultStatus(`Voice note did not match. The vault stays locked. Match score: ${result.score.toFixed(2)}`, "error");
             }
             return;
           }
