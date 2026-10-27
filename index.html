@@ -373,6 +373,13 @@
       object-fit: cover;
       display: block;
       background: #0b1721;
+      transition: filter .25s ease, transform .25s ease;
+    }
+
+    .media-card.locked img,
+    .media-card.locked video {
+      filter: blur(22px) brightness(0.55) saturate(0.5);
+      transform: scale(1.04);
     }
 
     .meta {
@@ -386,6 +393,7 @@
       gap: 8px;
       font-size: .78rem;
       color: var(--text);
+      z-index: 4;
     }
 
     .tag {
@@ -402,7 +410,7 @@
       content: "";
       position: absolute;
       inset: 0;
-      background: rgba(3,12,18,.6);
+      background: rgba(3,12,18,.55);
       z-index: 2;
     }
 
@@ -645,6 +653,9 @@
     const mediaGrid = document.getElementById("mediaGrid");
     const userIdentity = document.getElementById("userIdentity");
 
+    const signupForm = document.getElementById("signupForm");
+    const loginForm = document.getElementById("loginForm");
+
     function setMessage(el, text, type) {
       el.textContent = text;
       el.className = "message show " + type;
@@ -724,6 +735,15 @@
           : type === "error"
           ? "rgba(255,107,138,.35)"
           : "rgba(95,228,255,.35)";
+    }
+
+    function lockAllMedia(user) {
+      if (!user || !user.media) return;
+      user.media = user.media.map(item => ({
+        ...item,
+        locked: true,
+        unlocked: false
+      }));
     }
 
     function saveCurrentUser() {
@@ -811,6 +831,7 @@
           const video = document.createElement("video");
           video.src = item.dataUrl;
           video.controls = true;
+          video.muted = false;
           card.appendChild(video);
         }
 
@@ -1050,9 +1071,6 @@
       setMessage(signupMessage, `Demo OTP sent to ${countryCode}${phone}: ${state.generatedOtp}`, "success");
     });
 
-    signupForm = document.getElementById("signupForm");
-    loginForm = document.getElementById("loginForm");
-
     signupForm.addEventListener("submit", (event) => {
       event.preventDefault();
 
@@ -1122,7 +1140,9 @@
         return;
       }
 
-      state.currentUser = user;
+      state.currentUser = { ...user, media: user.media || [] };
+      lockAllMedia(state.currentUser);
+      saveCurrentUser();
       clearMessage(loginMessage);
       showVault();
     });
@@ -1136,6 +1156,11 @@
     });
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
+      if (state.currentUser) {
+        lockAllMedia(state.currentUser);
+        saveCurrentUser();
+      }
+
       state.currentUser = null;
       state.generatedOtp = null;
       document.getElementById("signupOtp").value = "";
