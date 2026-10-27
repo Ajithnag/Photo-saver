@@ -476,6 +476,64 @@
       cursor: pointer;
     }
 
+    .song-section {
+      border: 1px dashed rgba(95,228,255,.38);
+      background: rgba(255,255,255,.02);
+      border-radius: 14px;
+      padding: 18px;
+      margin-top: 22px;
+    }
+
+    .song-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .song-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,.02);
+    }
+
+    .song-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: .9rem;
+    }
+
+    .song-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .small-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: .75rem;
+    }
+
+    .small-btn.play {
+      background: rgba(95,228,255,.12);
+      border: 1px solid rgba(95,228,255,.35);
+      color: #dffbff;
+    }
+
+    .small-btn.delete {
+      background: rgba(255,107,138,.12);
+      border: 1px solid rgba(255,107,138,.35);
+      color: #ffe7ee;
+    }
+
     .empty {
       padding: 18px;
       border: 1px dashed rgba(255,255,255,.14);
@@ -738,6 +796,17 @@
 
         <h3 class="locker-title">Locked Media Locker</h3>
         <div id="mediaGrid" class="media-grid"></div>
+
+        <div class="song-section">
+          <h3 class="locker-title" style="margin-bottom: 8px;">Songs</h3>
+
+          <input id="songUpload" type="file" accept="audio/*" />
+          <small style="display:block; margin-top:10px; color: var(--muted);">
+            Upload songs. The song plays only when the vault is unlocked and stops when the vault is locked again.
+          </small>
+
+          <div id="songList" class="song-list"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -751,7 +820,7 @@
 
   <script>
     // NOTE:
-    // If old broken data is already stored, clear it once in the browser console:
+    // If old broken data is already stored, run this once in the browser console:
     // localStorage.removeItem("secure_voice_vault_users");
     // indexedDB.deleteDatabase("secure_voice_vault_media");
 
@@ -760,15 +829,18 @@
     const MEDIA_STORE = "media";
     const MAX_ITEMS = 15;
     const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+    const MAX_SONG_SIZE = 20 * 1024 * 1024;
     const VOICE_MATCH_THRESHOLD = 0.88;
 
     const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
     const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm", ".avi", ".mkv", ".3gp", ".mpeg", ".mpg"];
+    const AUDIO_EXTENSIONS = [".mp3", ".wav", ".m4a", ".aac", ".ogg"];
 
     const state = {
       currentUser: null,
       generatedOtp: null,
-      activeTab: "login"
+      activeTab: "login",
+      currentSongAudio: null
     };
 
     const authPanel = document.getElementById("authPanel");
@@ -788,6 +860,8 @@
     const signupForm = document.getElementById("signupForm");
     const loginForm = document.getElementById("loginForm");
     const mediaUpload = document.getElementById("mediaUpload");
+    const songUpload = document.getElementById("songUpload");
+    const songList = document.getElementById("songList");
     const mediaViewer = document.getElementById("mediaViewer");
     const viewerContent = document.getElementById("viewerContent");
     const closeViewerBtn = document.getElementById("closeViewerBtn");
@@ -804,6 +878,12 @@
       const type = (file.type || "").toLowerCase();
       const name = (file.name || "").toLowerCase();
       return type.startsWith("image/") || IMAGE_EXTENSIONS.some(ext => name.endsWith(ext));
+    }
+
+    function isAudioFile(file) {
+      const type = (file.type || "").toLowerCase();
+      const name = (file.name || "").toLowerCase();
+      return type.startsWith("audio/") || AUDIO_EXTENSIONS.some(ext => name.endsWith(ext));
     }
 
     function setMessage(el, text, type) {
@@ -906,6 +986,12 @@
         voiceProfile: user.voiceProfile || null,
         voicePasswordProfile: user.voicePasswordProfile || null,
         voicePasswordText: user.voicePasswordText || "",
+        songs: Array.isArray(user.songs) ? user.songs.map(song => ({
+          id: song.id,
+          name: song.name,
+          type: song.type,
+          kind: song.kind || "song"
+        })) : [],
         media: (user.media || []).map(item => ({
           id: item.id,
           name: item.name,
@@ -953,6 +1039,8 @@
       userIdentity.textContent = `${state.currentUser.name} • ${state.currentUser.email}`;
       voicePasswordInput.value = state.currentUser.voicePasswordText || "";
       renderMedia();
+      renderSongs();
+      syncSongPlayback();
 
       if (!state.currentUser.voiceProfile) {
         setVaultStatus("Voice note not yet registered. Register your voice note before unlocking the vault.", "info");
@@ -1005,6 +1093,7 @@
       deleteMediaBlob(itemId).catch(() => {});
       saveUserOnly(state.currentUser);
       renderMedia();
+      syncSongPlayback();
       setVaultStatus("Media deleted successfully. You can upload new files now.", "success");
     }
 
@@ -1028,13 +1117,66 @@
       }
     }
 
-    function readFileAsDataURL(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader.readAsDataURL(file);
-      });
+    function validateSongFile(file) {
+      if (!state.currentUser) throw new Error("Please login first.");
+      if (!isAudioFile(file)) {
+        throw new Error(`Unsupported song type: ${file.name}`);
+      }
+      if (file.size > MAX_SONG_SIZE) {
+        throw new Error(`Song too large: ${file.name}. Maximum size is 20 MB.`);
+      }
+    }
+
+    function stopCurrentSong() {
+      if (state.currentSongAudio) {
+        state.currentSongAudio.pause();
+        state.currentSongAudio.currentTime = 0;
+        state.currentSongAudio = null;
+      }
+    }
+
+    function shouldPlaySong() {
+      if (!state.currentUser) return false;
+      const media = state.currentUser.media || [];
+      if (!media.length) return false;
+      return media.every(item => item.unlocked);
+    }
+
+    function syncSongPlayback() {
+      if (!state.currentUser) {
+        stopCurrentSong();
+        return;
+      }
+
+      const songs = state.currentUser.songs || [];
+      if (!songs.length) {
+        stopCurrentSong();
+        return;
+      }
+
+      if (!shouldPlaySong()) {
+        stopCurrentSong();
+        return;
+      }
+
+      if (state.currentSongAudio) {
+        if (state.currentSongAudio.paused) {
+          state.currentSongAudio.play().catch(() => {});
+        }
+        return;
+      }
+
+      const firstSong = songs[0];
+      getMediaBlob(firstSong.id).then(blob => {
+        if (!blob || !shouldPlaySong() || !state.currentUser) return;
+
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.loop = true;
+        state.currentSongAudio = audio;
+
+        audio.play().catch(() => {});
+      }).catch(() => {});
     }
 
     async function handleMediaUpload(event) {
@@ -1066,11 +1208,126 @@
         state.currentUser.media.push(...items);
         saveUserOnly(state.currentUser);
         renderMedia();
+        syncSongPlayback();
         setVaultStatus(`${items.length} file(s) uploaded and locked until voice note unlock.`, "info");
         event.target.value = "";
       } catch (error) {
         setVaultStatus(error.message || "File upload failed.", "error");
         event.target.value = "";
+      }
+    }
+
+    async function handleSongUpload(event) {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+
+      try {
+        const uploaded = [];
+
+        for (const file of files) {
+          validateSongFile(file);
+
+          const item = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            name: file.name,
+            type: file.type || "audio/mpeg",
+            kind: "song"
+          };
+
+          await saveMediaBlob({ ...item, blob: file });
+          uploaded.push(item);
+        }
+
+        state.currentUser.songs = Array.isArray(state.currentUser.songs) ? state.currentUser.songs : [];
+        state.currentUser.songs.push(...uploaded);
+
+        saveUserOnly(state.currentUser);
+        renderSongs();
+        syncSongPlayback();
+
+        setVaultStatus(`${uploaded.length} song(s) uploaded.`, "info");
+        event.target.value = "";
+      } catch (error) {
+        setVaultStatus(error.message || "Song upload failed.", "error");
+        event.target.value = "";
+      }
+    }
+
+    function deleteSong(songId) {
+      if (!state.currentUser) return;
+
+      const before = (state.currentUser.songs || []).length;
+      state.currentUser.songs = (state.currentUser.songs || []).filter(song => song.id !== songId);
+
+      if ((state.currentUser.songs || []).length === before) {
+        setVaultStatus("Delete failed. Song not found.", "error");
+        return;
+      }
+
+      deleteMediaBlob(songId).catch(() => {});
+      saveUserOnly(state.currentUser);
+      renderSongs();
+      syncSongPlayback();
+      setVaultStatus("Song deleted successfully.", "success");
+    }
+
+    async function renderSongs() {
+      if (!state.currentUser) {
+        songList.innerHTML = "";
+        return;
+      }
+
+      const songs = state.currentUser.songs || [];
+
+      if (!songs.length) {
+        songList.innerHTML = '<div class="empty">No songs uploaded yet.</div>';
+        return;
+      }
+
+      songList.innerHTML = "";
+
+      for (const song of songs) {
+        const item = document.createElement("div");
+        item.className = "song-item";
+
+        const info = document.createElement("div");
+        info.innerHTML = `<strong>${song.name}</strong><span style="color: var(--muted); font-size: .8rem;">Song</span>`;
+
+        const actions = document.createElement("div");
+        actions.className = "song-actions";
+
+        const playBtn = document.createElement("button");
+        playBtn.type = "button";
+        playBtn.className = "small-btn play";
+        playBtn.textContent = "Play";
+        playBtn.addEventListener("click", async () => {
+          const blob = await getMediaBlob(song.id);
+          if (!blob) return;
+
+          if (state.currentSongAudio) {
+            state.currentSongAudio.pause();
+            state.currentSongAudio.currentTime = 0;
+          }
+
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audio.loop = true;
+          state.currentSongAudio = audio;
+          audio.play().catch(() => {});
+        });
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "small-btn delete";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => deleteSong(song.id));
+
+        actions.appendChild(playBtn);
+        actions.appendChild(deleteBtn);
+
+        item.appendChild(info);
+        item.appendChild(actions);
+        songList.appendChild(item);
       }
     }
 
@@ -1348,7 +1605,7 @@
               setVaultStatus("Voice note and voice password registered successfully. Only your voice can unlock it.", "success");
             }
 
-            renderMedia();
+            renderMedia(); // keep UI stable
             return;
           }
 
@@ -1369,6 +1626,7 @@
               }));
               saveUserOnly(state.currentUser);
               renderMedia();
+              syncSongPlayback();
               setVaultStatus(`Access granted. Voice and phrase matched. Voice score: ${voiceMatch.score.toFixed(2)}`, "success");
             } else {
               setVaultStatus(`Access denied. Only the registered voice can unlock. Voice score: ${voiceMatch.score.toFixed(2)}`, "error");
@@ -1384,6 +1642,7 @@
               });
               saveUserOnly(state.currentUser);
               renderMedia();
+              syncSongPlayback();
               setVaultStatus(`Access granted. Media unlocked. Voice score: ${voiceMatch.score.toFixed(2)}`, "success");
             } else {
               setVaultStatus(`Access denied. This media remains locked. Voice score: ${voiceMatch.score.toFixed(2)}`, "error");
@@ -1523,6 +1782,7 @@
         voiceProfile: null,
         voicePasswordProfile: null,
         voicePasswordText: voicePassword,
+        songs: [],
         media: []
       };
 
@@ -1548,7 +1808,8 @@
 
       state.currentUser = {
         ...user,
-        media: Array.isArray(user.media) ? user.media : []
+        media: Array.isArray(user.media) ? user.media : [],
+        songs: Array.isArray(user.songs) ? user.songs : []
       };
 
       lockAllMedia(state.currentUser);
@@ -1600,6 +1861,7 @@
         saveUserOnly(state.currentUser);
       }
 
+      stopCurrentSong();
       state.currentUser = null;
       state.generatedOtp = null;
       document.getElementById("signupOtp").value = "";
@@ -1607,6 +1869,7 @@
     });
 
     mediaUpload.addEventListener("change", handleMediaUpload);
+    songUpload.addEventListener("change", handleSongUpload);
     closeViewerBtn.addEventListener("click", closeMediaViewer);
     mediaViewer.addEventListener("click", (e) => {
       if (e.target === mediaViewer) closeMediaViewer();
@@ -1628,6 +1891,7 @@
           voiceProfile: null,
           voicePasswordProfile: null,
           voicePasswordText: "unlock-now-123",
+          songs: [],
           media: []
         }
       ]);
