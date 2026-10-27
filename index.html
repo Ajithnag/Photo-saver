@@ -648,7 +648,7 @@
         <div class="upload-box">
           <input id="mediaUpload" type="file" accept="image/*,video/*" multiple />
           <small>
-            Upload up to 15 photos. Videos are limited to 10 MB each. All media stays blurred and locked until
+            Upload up to 15 photos or videos. Videos are limited to 10 MB each. All media stays blurred and locked until
             your registered voice note matches the voice note used to unlock.
           </small>
         </div>
@@ -663,6 +663,9 @@
     const USERS_KEY = "secure_voice_vault_users";
     const MAX_PHOTOS = 15;
     const MAX_VIDEO_SIZE = 10 * 1024 * 1024;
+
+    const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
+    const VIDEO_EXTENSIONS = [".mp4", ".mov", ".webm", ".avi", ".mkv", ".3gp", ".mpeg", ".mpg"];
 
     const state = {
       currentUser: null,
@@ -688,6 +691,18 @@
     const signupForm = document.getElementById("signupForm");
     const loginForm = document.getElementById("loginForm");
     const mediaUpload = document.getElementById("mediaUpload");
+
+    function isVideoFile(file) {
+      const type = (file.type || "").toLowerCase();
+      const name = (file.name || "").toLowerCase();
+      return type.startsWith("video/") || VIDEO_EXTENSIONS.some(ext => name.endsWith(ext));
+    }
+
+    function isImageFile(file) {
+      const type = (file.type || "").toLowerCase();
+      const name = (file.name || "").toLowerCase();
+      return type.startsWith("image/") || IMAGE_EXTENSIONS.some(ext => name.endsWith(ext));
+    }
 
     function setMessage(el, text, type) {
       el.textContent = text;
@@ -817,7 +832,10 @@
       }
 
       for (const file of files) {
-        if (file.type.startsWith("video/") && file.size > MAX_VIDEO_SIZE) {
+        if (!isImageFile(file) && !isVideoFile(file)) {
+          throw new Error(`Unsupported file type: ${file.name}`);
+        }
+        if (isVideoFile(file) && file.size > MAX_VIDEO_SIZE) {
           throw new Error(`Video too large: ${file.name}. Maximum size is 10 MB.`);
         }
       }
@@ -846,13 +864,15 @@
 
         const items = await Promise.all(files.map(async (file) => {
           const dataUrl = await readFileAsDataURL(file);
+          const isVideo = isVideoFile(file);
           return {
             id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
             name: file.name,
-            type: file.type,
+            type: file.type || (isVideo ? "video/mp4" : "image/jpeg"),
             dataUrl,
             locked: true,
-            unlocked: false
+            unlocked: false,
+            kind: isVideo ? "video" : "image"
           };
         }));
 
@@ -881,23 +901,25 @@
         const card = document.createElement("div");
         card.className = "media-card" + (item.locked ? " locked" : "");
 
-        if (item.type.startsWith("image/")) {
-          const img = document.createElement("img");
-          img.src = item.dataUrl;
-          img.alt = item.name;
-          card.appendChild(img);
-        } else {
+        const kind = item.kind || (item.type && item.type.startsWith("video/") ? "video" : "image");
+
+        if (kind === "video") {
           const video = document.createElement("video");
           video.src = item.dataUrl;
           video.controls = true;
           video.muted = false;
           card.appendChild(video);
+        } else {
+          const img = document.createElement("img");
+          img.src = item.dataUrl;
+          img.alt = item.name;
+          card.appendChild(img);
         }
 
         const meta = document.createElement("div");
         meta.className = "meta";
         meta.innerHTML = `
-          <span class="tag">${item.type.startsWith("image/") ? "Photo" : "Video"}</span>
+          <span class="tag">${kind === "video" ? "Video" : "Photo"}</span>
           <span>${item.name.length > 12 ? item.name.slice(0, 12) + "..." : item.name}</span>
         `;
 
