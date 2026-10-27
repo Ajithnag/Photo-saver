@@ -258,6 +258,15 @@
       color: #ffe5ec;
     }
 
+    .btn.text {
+      background: transparent;
+      border: none;
+      color: var(--primary);
+      text-align: center;
+      padding: 10px 0 0;
+      font-size: 0.9rem;
+    }
+
     .vault {
       background: linear-gradient(180deg, rgba(18,36,52,.96), rgba(6,16,25,.98));
       border: 1px solid var(--border);
@@ -526,6 +535,27 @@
 
               <button class="btn primary" type="submit">Login</button>
             </form>
+
+            <button id="forgotPasswordBtn" class="btn text" type="button">Forgot password?</button>
+
+            <div id="forgotPasswordBox" class="hidden" style="margin-top: 18px;">
+              <div class="field">
+                <label for="fpEmail">Email ID</label>
+                <input id="fpEmail" type="email" placeholder="Enter your registered email" />
+              </div>
+
+              <div class="field">
+                <label for="fpNewPassword">New Password</label>
+                <input id="fpNewPassword" type="password" placeholder="Enter new password" />
+              </div>
+
+              <div class="field">
+                <label for="fpConfirmPassword">Confirm New Password</label>
+                <input id="fpConfirmPassword" type="password" placeholder="Confirm new password" />
+              </div>
+
+              <button id="resetPasswordBtn" class="btn primary" type="button">Reset Password</button>
+            </div>
           </div>
         </div>
       </div>
@@ -653,6 +683,9 @@
     const vaultStatus = document.getElementById("vaultStatus");
     const mediaGrid = document.getElementById("mediaGrid");
     const userIdentity = document.getElementById("userIdentity");
+    const forgotPasswordBox = document.getElementById("forgotPasswordBox");
+    const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+    const resetPasswordBtn = document.getElementById("resetPasswordBtn");
 
     const signupForm = document.getElementById("signupForm");
     const loginForm = document.getElementById("loginForm");
@@ -1005,11 +1038,13 @@
           if (mode === "register" || mode === "change") {
             state.currentUser.voiceProfile = profile;
             saveCurrentUser();
+
             if (mode === "change") {
-              setVaultStatus("Voice note updated successfully. All media remains protected by the new voice note.", "success");
+              setVaultStatus("Voice note changed successfully. Media is now protected by the new voice note.", "success");
             } else {
               setVaultStatus("Voice note registered successfully. Your media vault is now protected by your voice note.", "success");
             }
+
             renderMedia();
             return;
           }
@@ -1059,6 +1094,48 @@
         setVaultStatus("Microphone access is required for voice verification.", "error");
       }
     }
+
+    forgotPasswordBtn.addEventListener("click", () => {
+      forgotPasswordBox.classList.toggle("hidden");
+    });
+
+    resetPasswordBtn.addEventListener("click", () => {
+      const email = document.getElementById("fpEmail").value.trim().toLowerCase();
+      const newPassword = document.getElementById("fpNewPassword").value;
+      const confirmPassword = document.getElementById("fpConfirmPassword").value;
+
+      if (!email || !newPassword || !confirmPassword) {
+        setMessage(loginMessage, "Please enter email and new password.", "error");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        setMessage(loginMessage, "Password must be at least 6 characters.", "error");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setMessage(loginMessage, "Passwords do not match.", "error");
+        return;
+      }
+
+      const users = getUsers();
+      const index = users.findIndex(u => u.email === email);
+
+      if (index === -1) {
+        setMessage(loginMessage, "This email is not registered.", "error");
+        return;
+      }
+
+      users[index].password = newPassword;
+      saveUsers(users);
+
+      setMessage(loginMessage, "Password reset successfully. You can now login with the new password.", "success");
+      forgotPasswordBox.classList.add("hidden");
+      document.getElementById("fpEmail").value = "";
+      document.getElementById("fpNewPassword").value = "";
+      document.getElementById("fpConfirmPassword").value = "";
+    });
 
     loginTab.addEventListener("click", () => switchTab("login"));
     signupTab.addEventListener("click", () => switchTab("signup"));
