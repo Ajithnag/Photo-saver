@@ -202,9 +202,7 @@
       letter-spacing: .02em;
     }
 
-    input, select, button {
-      font: inherit;
-    }
+    input, select, button { font: inherit; }
 
     input, select {
       width: 100%;
@@ -510,7 +508,7 @@
 
             <ul class="features">
               <li><span class="check">✓</span> Voice note-based unlocking</li>
-              <li><span class="check">✓</span> Up to 15 photos</li>
+              <li><span class="check">✓</span> Up to 15 total items</li>
               <li><span class="check">✓</span> Video up to 10 MB each</li>
               <li><span class="check">✓</span> Login with email and password</li>
             </ul>
@@ -648,8 +646,8 @@
         <div class="upload-box">
           <input id="mediaUpload" type="file" accept="image/*,video/*" multiple />
           <small>
-            Upload up to 15 photos or videos. Videos are limited to 10 MB each. All media stays blurred and locked until
-            your registered voice note matches the voice note used to unlock.
+            Upload up to 15 items total (photos + videos). Videos are limited to 10 MB each.
+            All media stays blurred and locked until your registered voice note matches.
           </small>
         </div>
 
@@ -687,7 +685,6 @@
     const forgotPasswordBox = document.getElementById("forgotPasswordBox");
     const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
     const resetPasswordBtn = document.getElementById("resetPasswordBtn");
-
     const signupForm = document.getElementById("signupForm");
     const loginForm = document.getElementById("loginForm");
     const mediaUpload = document.getElementById("mediaUpload");
@@ -822,13 +819,12 @@
     }
 
     function validateNewFiles(files) {
-      if (!state.currentUser) {
-        throw new Error("Please login first.");
-      }
+      if (!state.currentUser) throw new Error("Please login first.");
 
       const currentCount = Array.isArray(state.currentUser.media) ? state.currentUser.media.length : 0;
+
       if (currentCount + files.length > MAX_PHOTOS) {
-        throw new Error(`You can store only ${MAX_PHOTOS} media items total.`);
+        throw new Error(`You can upload only ${MAX_PHOTOS} total items including photos and videos.`);
       }
 
       for (const file of files) {
@@ -856,10 +852,6 @@
       if (!files.length) return;
 
       try {
-        if (!state.currentUser) {
-          throw new Error("Please login first.");
-        }
-
         validateNewFiles(files);
 
         const items = await Promise.all(files.map(async (file) => {
@@ -1020,9 +1012,7 @@
     function extractAudioProfile(audioBuffer) {
       const channel = audioBuffer.getChannelData(0);
       const normalized = normalizeSignal(channel);
-      const rms = Math.sqrt(
-        normalized.reduce((sum, v) => sum + (v * v), 0) / normalized.length
-      );
+      const rms = Math.sqrt(normalized.reduce((sum, v) => sum + (v * v), 0) / normalized.length);
       const zcr = zeroCrossingRate(normalized);
       const spectrum = makeSpectrum(normalized, 32);
       const pitch = estimatePitch(normalized, audioBuffer.sampleRate);
