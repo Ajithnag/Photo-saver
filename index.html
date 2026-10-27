@@ -466,29 +466,15 @@
     }
 
     @media (max-width: 820px) {
-      .auth-grid {
-        grid-template-columns: 1fr;
-      }
-      .brand {
-        padding: 0;
-      }
+      .auth-grid { grid-template-columns: 1fr; }
+      .brand { padding: 0; }
     }
 
     @media (max-width: 560px) {
-      .otp-wrap {
-        grid-template-columns: 1fr;
-      }
-      .toolbar {
-        flex-direction: column;
-      }
-      .toolbar .btn {
-        width: 100%;
-        min-width: 0;
-      }
-      .vault-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
+      .otp-wrap { grid-template-columns: 1fr; }
+      .toolbar { flex-direction: column; }
+      .toolbar .btn { width: 100%; min-width: 0; }
+      .vault-header { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
@@ -689,6 +675,7 @@
 
     const signupForm = document.getElementById("signupForm");
     const loginForm = document.getElementById("loginForm");
+    const mediaUpload = document.getElementById("mediaUpload");
 
     function setMessage(el, text, type) {
       el.textContent = text;
@@ -746,7 +733,7 @@
       if (!state.currentUser.voiceProfile) {
         setVaultStatus("Voice note not yet registered. Register your voice note before unlocking the vault.", "info");
       } else {
-        const unlocked = state.currentUser.media.filter(item => item.unlocked).length;
+        const unlocked = (state.currentUser.media || []).filter(item => item.unlocked).length;
         if (unlocked > 0) {
           setVaultStatus(`Voice note matched. ${unlocked} media item(s) unlocked.`, "success");
         } else {
@@ -792,7 +779,11 @@
     }
 
     function validateNewFiles(files) {
-      const currentCount = state.currentUser.media.length;
+      if (!state.currentUser) {
+        throw new Error("Please login first.");
+      }
+
+      const currentCount = Array.isArray(state.currentUser.media) ? state.currentUser.media.length : 0;
       if (currentCount + files.length > MAX_PHOTOS) {
         throw new Error(`You can store only ${MAX_PHOTOS} media items total.`);
       }
@@ -815,9 +806,14 @@
 
     async function handleMediaUpload(event) {
       const files = Array.from(event.target.files || []);
+
       if (!files.length) return;
 
       try {
+        if (!state.currentUser) {
+          throw new Error("Please login first.");
+        }
+
         validateNewFiles(files);
 
         const items = await Promise.all(files.map(async (file) => {
@@ -832,6 +828,7 @@
           };
         }));
 
+        state.currentUser.media = Array.isArray(state.currentUser.media) ? state.currentUser.media : [];
         state.currentUser.media.push(...items);
         saveCurrentUser();
         renderMedia();
@@ -1058,7 +1055,7 @@
 
           if (mode === "unlock-all") {
             if (result.pass) {
-              state.currentUser.media = state.currentUser.media.map(item => ({
+              state.currentUser.media = (state.currentUser.media || []).map(item => ({
                 ...item,
                 locked: false,
                 unlocked: true
@@ -1074,7 +1071,7 @@
 
           if (mode === "unlock-single") {
             if (result.pass) {
-              state.currentUser.media = state.currentUser.media.map(item => {
+              state.currentUser.media = (state.currentUser.media || []).map(item => {
                 if (item.id === itemId) return { ...item, locked: false, unlocked: true };
                 return item;
               });
@@ -1222,7 +1219,11 @@
         return;
       }
 
-      state.currentUser = { ...user, media: user.media || [] };
+      state.currentUser = {
+        ...user,
+        media: Array.isArray(user.media) ? user.media : []
+      };
+
       lockAllMedia(state.currentUser);
       saveCurrentUser();
       clearMessage(loginMessage);
@@ -1253,7 +1254,7 @@
       showAuth();
     });
 
-    document.getElementById("mediaUpload").addEventListener("change", handleMediaUpload);
+    mediaUpload.addEventListener("change", handleMediaUpload);
 
     switchTab("login");
     showAuth();
