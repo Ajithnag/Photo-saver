@@ -34,9 +34,27 @@
       display: grid;
       place-items: center;
       padding: 24px;
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+      transition: background-image 0.4s ease, background-color 0.4s ease;
     }
 
-    .app { width: min(1050px, 100%); }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(2,7,12,0.55);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .app {
+      width: min(1050px, 100%);
+      position: relative;
+      z-index: 1;
+    }
+
     .hidden { display: none !important; }
 
     .panel {
@@ -819,11 +837,6 @@
   </div>
 
   <script>
-    // NOTE:
-    // If old broken data is already stored, run this once in the browser console:
-    // localStorage.removeItem("secure_voice_vault_users");
-    // indexedDB.deleteDatabase("secure_voice_vault_media");
-
     const USERS_KEY = "secure_voice_vault_users";
     const MEDIA_DB = "secure_voice_vault_media";
     const MEDIA_STORE = "media";
@@ -878,12 +891,6 @@
       const type = (file.type || "").toLowerCase();
       const name = (file.name || "").toLowerCase();
       return type.startsWith("image/") || IMAGE_EXTENSIONS.some(ext => name.endsWith(ext));
-    }
-
-    function isAudioFile(file) {
-      const type = (file.type || "").toLowerCase();
-      const name = (file.name || "").toLowerCase();
-      return type.startsWith("audio/") || AUDIO_EXTENSIONS.some(ext => name.endsWith(ext));
     }
 
     function isSongFile(file) {
@@ -1038,10 +1045,42 @@
       return String(Math.floor(100000 + Math.random() * 900000));
     }
 
+    function resetBodyBackground() {
+      document.body.style.backgroundImage = "";
+      document.body.style.backgroundColor = "";
+    }
+
+    async function applyVaultBackground() {
+      if (!state.currentUser || !Array.isArray(state.currentUser.media) || !state.currentUser.media.length) {
+        resetBodyBackground();
+        return;
+      }
+
+      const firstUnlockedPhoto = state.currentUser.media.find(item => item.unlocked && item.kind === "image");
+      if (!firstUnlockedPhoto) {
+        resetBodyBackground();
+        return;
+      }
+
+      const blob = await getMediaBlob(firstUnlockedPhoto.id);
+      if (!blob) {
+        resetBodyBackground();
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      document.body.style.backgroundImage = `url("${url}")`;
+      document.body.style.backgroundColor = "#081720";
+      document.body.style.backgroundSize = "cover";
+      document.body.style.backgroundPosition = "center";
+      document.body.style.backgroundRepeat = "no-repeat";
+    }
+
     function showAuth() {
       authPanel.classList.remove("hidden");
       vaultPanel.classList.add("hidden");
       switchTab(state.activeTab);
+      resetBodyBackground();
     }
 
     function showVault() {
@@ -1051,6 +1090,7 @@
       voicePasswordInput.value = state.currentUser.voicePasswordText || "";
       renderMedia();
       renderSongs();
+      applyVaultBackground();
       syncSongPlayback();
 
       if (!state.currentUser.voiceProfile) {
@@ -1085,7 +1125,6 @@
       if (!state.currentUser || !Array.isArray(state.currentUser.media) || !state.currentUser.media.length) {
         return false;
       }
-
       return state.currentUser.media.every(item => item.unlocked === true);
     }
 
@@ -1096,6 +1135,22 @@
         locked: true,
         unlocked: false
       }));
+    }
+
+    async function clearSongsForUser(user) {
+      if (!user || !Array.isArray(user.songs)) return;
+
+      const ids = user.songs.map(song => song.id);
+
+      for (const id of ids) {
+        await deleteMediaBlob(id).catch(() => {});
+      }
+
+      user.songs = [];
+      saveUserOnly(user);
+      renderSongs();
+      stopCurrentSong();
+      syncSongPlayback();
     }
 
     function deleteMediaItem(itemId) {
@@ -1112,6 +1167,7 @@
       deleteMediaBlob(itemId).catch(() => {});
       saveUserOnly(state.currentUser);
       renderMedia();
+      applyVaultBackground();
       syncSongPlayback();
       setVaultStatus("Media deleted successfully. You can upload new files now.", "success");
     }
@@ -1156,25 +1212,10 @@
       }
     }
 
-    function clearSongsForUser(user) {
-      if (!user || !Array.isArray(user.songs)) return;
-
-      const songIds = user.songs.map(song => song.id);
-
-      Promise.all(songIds.map(id => deleteMediaBlob(id).catch(() => {}))).finally(() => {
-        user.songs = [];
-        saveUserOnly(user);
-        renderSongs();
-        syncSongPlayback();
-      });
-    }
-
     function shouldPlaySong() {
       if (!state.currentUser) return false;
-
       const songs = Array.isArray(state.currentUser.songs) ? state.currentUser.songs : [];
       if (!songs.length) return false;
-
       return isVaultUnlocked();
     }
 
@@ -1206,12 +1247,10 @@
       const firstSong = songs[0];
       getMediaBlob(firstSong.id).then(blob => {
         if (!blob || !shouldPlaySong() || !state.currentUser) return;
-
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audio.loop = true;
         state.currentSongAudio = audio;
-
         audio.play().catch(() => {});
       }).catch(() => {});
     }
@@ -1244,6 +1283,7 @@
         state.currentUser.media.push(...items);
         saveUserOnly(state.currentUser);
         renderMedia();
+        applyVaultBackground();
         syncSongPlayback();
         setVaultStatus(`${items.length} file(s) uploaded and locked until voice note unlock.`, "info");
         event.target.value = "";
@@ -1611,6 +1651,7 @@
               }));
               saveUserOnly(state.currentUser);
               renderMedia();
+              applyVaultBackground();
               syncSongPlayback();
               setVaultStatus(`Access granted. Voice and phrase matched. Voice score: ${voiceMatch.score.toFixed(2)}`, "success");
             } else {
@@ -1627,6 +1668,7 @@
               });
               saveUserOnly(state.currentUser);
               renderMedia();
+              applyVaultBackground();
               syncSongPlayback();
               setVaultStatus(`Access granted. Media unlocked. Voice score: ${voiceMatch.score.toFixed(2)}`, "success");
             } else {
@@ -1841,24 +1883,18 @@
       startRecording("unlock-all");
     });
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
       if (state.currentUser) {
-        // Lock media again
         lockAllMedia(state.currentUser);
-
-        // Auto delete songs on logout
-        clearSongsForUser(state.currentUser);
-
-        // Save current locked state
+        await clearSongsForUser(state.currentUser);
         saveUserOnly(state.currentUser);
-
-        // Stop any music immediately
         stopCurrentSong();
       }
 
       state.currentUser = null;
       state.generatedOtp = null;
       document.getElementById("signupOtp").value = "";
+      resetBodyBackground();
       showAuth();
     });
 
