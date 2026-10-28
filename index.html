@@ -7,8 +7,8 @@
   <style>
     :root {
       --bg: #081720;
-      --panel: #122437;
-      --panel-2: #1a2e47;
+      --panel: rgba(12, 24, 35, 0.78);
+      --panel-2: rgba(26, 46, 71, 0.75);
       --primary: #5fe4ff;
       --primary-2: #8d7dff;
       --success: #58e7a0;
@@ -26,27 +26,31 @@
       margin: 0;
       min-height: 100%;
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: radial-gradient(circle at top, #17314a 0%, rgba(9,18,28,.9) 40%, #020c13 100%);
       color: var(--text);
-    }
-
-    body {
-      display: grid;
-      place-items: center;
-      padding: 24px;
+      background: radial-gradient(circle at top, #17314a 0%, rgba(9,18,28,.9) 40%, #020c13 100%);
       background-size: cover;
       background-position: center center;
       background-repeat: no-repeat;
       transition: background-image 0.4s ease, background-color 0.4s ease;
     }
 
+    body {
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
     body::before {
       content: "";
       position: fixed;
       inset: 0;
-      background: rgba(2,7,12,0.55);
+      background: rgba(2, 7, 12, 0.42);
       z-index: 0;
       pointer-events: none;
+      transition: background 0.4s ease;
     }
 
     .app {
@@ -58,11 +62,13 @@
     .hidden { display: none !important; }
 
     .panel {
-      background: linear-gradient(180deg, rgba(18,36,52,.96), rgba(6,16,25,.98));
+      background: linear-gradient(180deg, rgba(18,36,52,.72), rgba(6,16,25,.75));
       border: 1px solid var(--border);
       border-radius: 24px;
       box-shadow: var(--shadow);
       overflow: hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
 
     .auth-panel { padding: 26px; }
@@ -293,11 +299,13 @@
     }
 
     .vault {
-      background: linear-gradient(180deg, rgba(18,36,52,.96), rgba(6,16,25,.98));
+      background: linear-gradient(180deg, rgba(18,36,52,.72), rgba(6,16,25,.72));
       border: 1px solid var(--border);
       border-radius: 24px;
       box-shadow: var(--shadow);
       overflow: hidden;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
 
     .vault-header {
@@ -529,27 +537,6 @@
       display: flex;
       gap: 8px;
       align-items: center;
-    }
-
-    .small-btn {
-      border: none;
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: .75rem;
-    }
-
-    .small-btn.play {
-      background: rgba(95,228,255,.12);
-      border: 1px solid rgba(95,228,255,.35);
-      color: #dffbff;
-    }
-
-    .small-btn.delete {
-      background: rgba(255,107,138,.12);
-      border: 1px solid rgba(255,107,138,.35);
-      color: #ffe7ee;
     }
 
     .empty {
@@ -1048,6 +1035,10 @@
     function resetBodyBackground() {
       document.body.style.backgroundImage = "";
       document.body.style.backgroundColor = "";
+      document.body.style.backgroundSize = "";
+      document.body.style.backgroundPosition = "";
+      document.body.style.backgroundRepeat = "";
+      document.body.style.filter = "";
     }
 
     async function applyVaultBackground() {
@@ -1072,8 +1063,9 @@
       document.body.style.backgroundImage = `url("${url}")`;
       document.body.style.backgroundColor = "#081720";
       document.body.style.backgroundSize = "cover";
-      document.body.style.backgroundPosition = "center";
+      document.body.style.backgroundPosition = "center center";
       document.body.style.backgroundRepeat = "no-repeat";
+      document.body.style.filter = "none";
     }
 
     function showAuth() {
