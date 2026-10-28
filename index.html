@@ -7,17 +7,17 @@
   <style>
     :root {
       --bg: #081720;
-      --panel: rgba(12, 24, 35, 0.78);
-      --panel-2: rgba(26, 46, 71, 0.75);
+      --panel: rgba(14, 23, 33, 0.72);
+      --panel-2: rgba(23, 37, 52, 0.8);
       --primary: #5fe4ff;
       --primary-2: #8d7dff;
       --success: #58e7a0;
       --danger: #ff6b8a;
       --warning: #ffd166;
       --text: #edf8ff;
-      --muted: #bfd3ea;
-      --border: rgba(255,255,255,.12);
-      --shadow: 0 20px 45px rgba(0,0,0,.3);
+      --muted: #cfe0f0;
+      --border: rgba(255,255,255,.14);
+      --shadow: 0 22px 52px rgba(0,0,0,.32);
     }
 
     * { box-sizing: border-box; }
@@ -28,7 +28,7 @@
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       color: var(--text);
       background: radial-gradient(circle at top, #17314a 0%, rgba(9,18,28,.9) 40%, #020c13 100%);
-      background-size: cover;
+      background-size: contain;
       background-position: center center;
       background-repeat: no-repeat;
       transition: background-image 0.4s ease, background-color 0.4s ease;
@@ -41,16 +41,16 @@
       min-height: 100vh;
       position: relative;
       overflow-x: hidden;
+      background-color: #0b1218;
     }
 
     body::before {
       content: "";
       position: fixed;
       inset: 0;
-      background: rgba(3, 8, 12, 0.22);
+      background: rgba(3, 8, 12, 0.10);
       z-index: 0;
       pointer-events: none;
-      transition: background 0.4s ease;
     }
 
     .app {
@@ -62,13 +62,11 @@
     .hidden { display: none !important; }
 
     .panel {
-      background: linear-gradient(180deg, rgba(18,36,52,.72), rgba(6,16,25,.75));
+      background: linear-gradient(180deg, rgba(18,36,52,.66), rgba(6,16,25,.72));
       border: 1px solid var(--border);
       border-radius: 24px;
       box-shadow: var(--shadow);
       overflow: hidden;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
     }
 
     .auth-panel { padding: 26px; }
@@ -76,7 +74,7 @@
     .tabs {
       display: flex;
       gap: 12px;
-      background: rgba(255,255,255,.03);
+      background: rgba(255,255,255,.05);
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 8px;
@@ -173,11 +171,7 @@
       padding: 22px;
     }
 
-    .card h2 {
-      margin: 0 0 18px;
-      font-size: 1.7rem;
-      letter-spacing: -.04em;
-    }
+    .card h2 { margin: 0 0 18px; font-size: 1.7rem; letter-spacing: -.04em; }
 
     .message {
       display: none;
@@ -250,13 +244,8 @@
       margin-bottom: 12px;
     }
 
-    .voice-row input {
-      min-width: 0;
-    }
-
-    .voice-row button {
-      min-width: 170px;
-    }
+    .voice-row input { min-width: 0; }
+    .voice-row button { min-width: 170px; }
 
     .btn {
       width: 100%;
@@ -278,7 +267,7 @@
     }
 
     .btn.secondary {
-      background: rgba(255,255,255,.04);
+      background: rgba(255,255,255,.06);
       border: 1px solid var(--border);
       color: var(--text);
     }
@@ -299,13 +288,11 @@
     }
 
     #vaultPanel {
-      background: rgba(16, 26, 36, 0.35);
+      background: rgba(16, 26, 36, 0.52);
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: 24px;
       box-shadow: 0 30px 55px rgba(0,0,0,0.32);
       overflow: hidden;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
     }
 
     .vault-header {
@@ -326,8 +313,8 @@
     }
 
     .user-pill {
-      background: rgba(255,255,255,.04);
-      border: 1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
       padding: 9px 12px;
       border-radius: 999px;
       color: var(--muted);
@@ -362,7 +349,7 @@
       align-items: center;
       border-radius: 12px;
       border: 1px solid var(--border);
-      background: rgba(255,255,255,.03);
+      background: rgba(255,255,255,.04);
       padding: 12px 14px;
       color: var(--muted);
       margin-bottom: 18px;
@@ -371,22 +358,14 @@
 
     .upload-box {
       border: 1px dashed rgba(95,228,255,.38);
-      background: rgba(255,255,255,.02);
+      background: rgba(255,255,255,.04);
       border-radius: 18px;
       padding: 18px;
       margin-bottom: 22px;
-      background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.10);
-      backdrop-filter: blur(2px);
     }
 
-    .upload-box input[type=file] {
-      width: 100%;
-      border: none;
-      background: transparent;
-      padding: 8px 0;
-      color: var(--text);
-    }
+    .upload-box input[type=file] { width: 100%; border: none; background: transparent; padding: 8px 0; color: var(--text); }
 
     .upload-box small {
       display: block;
@@ -514,13 +493,11 @@
 
     .song-section {
       border: 1px dashed rgba(95,228,255,.38);
-      background: rgba(255,255,255,.02);
+      background: rgba(255,255,255,.04);
       border-radius: 18px;
       padding: 18px;
       margin-top: 22px;
-      background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.10);
-      backdrop-filter: blur(2px);
     }
 
     .song-list {
@@ -1042,9 +1019,9 @@
     function resetBodyBackground() {
       document.body.style.backgroundImage = "";
       document.body.style.backgroundColor = "";
-      document.body.style.backgroundSize = "";
-      document.body.style.backgroundPosition = "";
-      document.body.style.backgroundRepeat = "";
+      document.body.style.backgroundSize = "contain";
+      document.body.style.backgroundPosition = "center center";
+      document.body.style.backgroundRepeat = "no-repeat";
     }
 
     async function applyVaultBackground() {
@@ -1068,7 +1045,7 @@
       const url = URL.createObjectURL(blob);
       document.body.style.backgroundImage = `url("${url}")`;
       document.body.style.backgroundColor = "#081720";
-      document.body.style.backgroundSize = "cover";
+      document.body.style.backgroundSize = "contain";
       document.body.style.backgroundPosition = "center center";
       document.body.style.backgroundRepeat = "no-repeat";
     }
